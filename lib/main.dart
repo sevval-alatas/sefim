@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
@@ -46,9 +47,13 @@ class IrsaliyeApp extends StatelessWidget {
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          fillColor: colorScheme.surfaceContainerHighest.withValues(
+            alpha: 0.35,
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
             borderSide: BorderSide.none,
@@ -68,8 +73,10 @@ class IrsaliyeApp extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
-            textStyle:
-                const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            textStyle: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
@@ -79,8 +86,10 @@ class IrsaliyeApp extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
-            textStyle:
-                const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            textStyle: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
         cardTheme: CardThemeData(
@@ -122,9 +131,9 @@ class _AnaSayfaState extends State<AnaSayfa> {
   final _dayanimCtrl = TextEditingController();
   final _uretimCtrl = TextEditingController();
   final _siparisCtrl = TextEditingController();
-
   bool get _veriVarMi => _secilenFoto != null;
-  bool get _herhangiBirIslemSuruyor => _ocrYapiliyor || _kaydediliyor || _topluIsleniyor;
+  bool get _herhangiBirIslemSuruyor =>
+      _ocrYapiliyor || _kaydediliyor || _topluIsleniyor;
 
   Future<void> kamerayiAc() async {
     final XFile? foto = await _picker.pickImage(
@@ -150,6 +159,18 @@ class _AnaSayfaState extends State<AnaSayfa> {
     }
 
     await _fotografiIsle(foto);
+  }
+
+  Future<void> belgeSec() async {
+    final sonuc = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['jpg', 'jpeg', 'png', 'heic', 'heif', 'webp'],
+    );
+
+    final yol = sonuc.isEmpty ? null : sonuc.single.path;
+    if (yol == null) return;
+
+    await _fotografiIsle(XFile(yol));
   }
 
   Future<void> _fotografiIsle(XFile foto) async {
@@ -247,7 +268,10 @@ class _AnaSayfaState extends State<AnaSayfa> {
       }
     }
 
-    final secilen = await showTimePicker(context: context, initialTime: baslangic);
+    final secilen = await showTimePicker(
+      context: context,
+      initialTime: baslangic,
+    );
 
     if (secilen != null) {
       final ss = secilen.hour.toString().padLeft(2, '0');
@@ -296,8 +320,9 @@ class _AnaSayfaState extends State<AnaSayfa> {
       plaka: _plakaCtrl.text.trim(),
       dayanim: _dayanimCtrl.text.trim(),
       uretimMiktari: _uretimCtrl.text.trim(),
-      siparisMiktari:
-          _siparisCtrl.text.trim().isEmpty ? '-' : _siparisCtrl.text.trim(),
+      siparisMiktari: _siparisCtrl.text.trim().isEmpty
+          ? '-'
+          : _siparisCtrl.text.trim(),
     );
 
     final onaylandi = await _eksikAlanlariOnayla(veri);
@@ -309,8 +334,10 @@ class _AnaSayfaState extends State<AnaSayfa> {
       final uzanti = _secilenFoto!.path.contains('.')
           ? _secilenFoto!.path.split('.').last
           : 'jpg';
-      final gorselAdi =
-          await ExcelServisi.fotografiSakla(_secilenFoto!, uzanti);
+      final gorselAdi = await ExcelServisi.fotografiSakla(
+        _secilenFoto!,
+        uzanti,
+      );
 
       final (eklendi, mesaj) = await ExcelServisi.exceleEkle(veri, gorselAdi);
 
@@ -344,9 +371,9 @@ class _AnaSayfaState extends State<AnaSayfa> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Kaydedilirken hata oluştu: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Kaydedilirken hata oluştu: $e')));
     } finally {
       if (mounted) {
         setState(() => _kaydediliyor = false);
@@ -369,7 +396,9 @@ class _AnaSayfaState extends State<AnaSayfa> {
         final metin = await _ocrService.metniOku(foto.path);
         final veri = OcrAyiklamaServisi.metindenVerileriAyikla(metin);
         final dosya = File(foto.path);
-        final uzanti = dosya.path.contains('.') ? dosya.path.split('.').last : 'jpg';
+        final uzanti = dosya.path.contains('.')
+            ? dosya.path.split('.').last
+            : 'jpg';
         final gorselAdi = await ExcelServisi.fotografiSakla(dosya, uzanti);
         final (eklendi, mesaj) = await ExcelServisi.exceleEkle(veri, gorselAdi);
         if (eklendi) {
@@ -400,13 +429,19 @@ class _AnaSayfaState extends State<AnaSayfa> {
               const SizedBox(height: 8),
               Text(
                 '✓ $eklenen kayıt eklendi',
-                style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  color: Colors.green,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               if (atlanan > 0) ...[
                 const SizedBox(height: 4),
                 Text(
                   '⚠ $atlanan kayıt atlandı',
-                  style: TextStyle(color: Colors.orange.shade800, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: Colors.orange.shade800,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 ...notlar.map(
@@ -433,10 +468,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
     final dosya = await ExcelServisi.excelDosyasi();
     if (!mounted) return;
     await SharePlus.instance.share(
-      ShareParams(
-        files: [XFile(dosya.path)],
-        text: 'İrsaliye Excel Dosyası',
-      ),
+      ShareParams(files: [XFile(dosya.path)], text: 'İrsaliye Excel Dosyası'),
     );
   }
 
@@ -503,10 +535,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
                 ),
               )
             else
-              Image.file(
-                _secilenFoto!,
-                fit: BoxFit.cover,
-              ),
+              Image.file(_secilenFoto!, fit: BoxFit.cover),
             if (_ocrYapiliyor)
               Container(
                 color: Colors.black.withValues(alpha: 0.55),
@@ -519,8 +548,9 @@ class _AnaSayfaState extends State<AnaSayfa> {
                         height: 34,
                         child: CircularProgressIndicator(
                           strokeWidth: 3,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
                       ),
                       SizedBox(height: 14),
@@ -552,11 +582,9 @@ class _AnaSayfaState extends State<AnaSayfa> {
         actions: [
           IconButton(
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const KayitlarEkrani(),
-                ),
-              );
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const KayitlarEkrani()));
             },
             icon: const Icon(Icons.table_chart_outlined),
             tooltip: 'Kayıtları Gör',
@@ -589,8 +617,11 @@ class _AnaSayfaState extends State<AnaSayfa> {
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.fact_check_outlined,
-                                  size: 20, color: renkler.primary),
+                              Icon(
+                                Icons.fact_check_outlined,
+                                size: 20,
+                                color: renkler.primary,
+                              ),
                               const SizedBox(width: 8),
                               Text(
                                 'Okunan Bilgiler',
@@ -644,15 +675,17 @@ class _AnaSayfaState extends State<AnaSayfa> {
                             etiket: 'Üretim Miktarı (m³)',
                             controller: _uretimCtrl,
                             ikon: Icons.water_drop_outlined,
-                            keyboardType:
-                                const TextInputType.numberWithOptions(decimal: true),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
                           ),
                           IrsaliyeAlan(
                             etiket: 'Sipariş Miktarı (m³)',
                             controller: _siparisCtrl,
                             ikon: Icons.inventory_2_outlined,
-                            keyboardType:
-                                const TextInputType.numberWithOptions(decimal: true),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           FilledButton.icon(
@@ -668,7 +701,9 @@ class _AnaSayfaState extends State<AnaSayfa> {
                                   )
                                 : const Icon(Icons.save_outlined),
                             label: Text(
-                              _kaydediliyor ? 'Kaydediliyor...' : "Excel'e Kaydet",
+                              _kaydediliyor
+                                  ? 'Kaydediliyor...'
+                                  : "Excel'e Kaydet",
                             ),
                           ),
                         ],
@@ -700,7 +735,15 @@ class _AnaSayfaState extends State<AnaSayfa> {
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
-                  onPressed: _herhangiBirIslemSuruyor ? null : _topluFotografSec,
+                  onPressed: _herhangiBirIslemSuruyor ? null : belgeSec,
+                  icon: const Icon(Icons.insert_drive_file_outlined),
+                  label: const Text('Dosyalardan Belge Seç'),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: _herhangiBirIslemSuruyor
+                      ? null
+                      : _topluFotografSec,
                   icon: const Icon(Icons.collections_outlined),
                   label: const Text('Galeriden Çoklu Seç (Toplu İşle)'),
                 ),

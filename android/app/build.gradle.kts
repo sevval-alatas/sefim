@@ -29,6 +29,10 @@ android {
         versionName = flutter.versionName
     }
 
+    dependencies {
+        implementation("com.google.mlkit:text-recognition:16.0.1")
+    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.

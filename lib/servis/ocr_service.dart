@@ -1,19 +1,14 @@
-import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:flutter/services.dart';
 
 class OcrService {
-  final TextRecognizer _textRecognizer =
-  TextRecognizer(script: TextRecognitionScript.latin);
+  static const MethodChannel _kanal = MethodChannel('sefim/ocr');
 
   Future<String> metniOku(String imagePath) async {
-    final inputImage = InputImage.fromFilePath(imagePath);
-
-    final RecognizedText recognizedText =
-    await _textRecognizer.processImage(inputImage);
-
-    return recognizedText.text;
+    final metin = await _kanal.invokeMethod<String>('recognizeText', {
+      'path': imagePath,
+    });
+    return metin ?? '';
   }
 
-  Future<void> dispose() async {
-    await _textRecognizer.close();
-  }
+  Future<void> dispose() async {}
 }

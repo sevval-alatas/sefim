@@ -1,2 +1,6 @@
 #include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"
 #include "Generated.xcconfig"
+
+// Apple Silicon simulators require arm64. The generated Flutter setting still
+// excludes it for legacy Intel-only plugins, which are no longer used here.
+EXCLUDED_ARCHS[sdk=iphonesimulator*] = i386

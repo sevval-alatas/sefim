@@ -1,17 +1,23 @@
-# sefim
+# Sefim
 
-A new Flutter project.
+Beton irsaliyelerini mobil cihazdan okuyup Excel'e aktaran Flutter uygulaması.
 
-## Getting Started
+## Akış
 
-This project is a starting point for a Flutter application.
+- Kamerayla irsaliye fotoğrafı çekilir.
+- Galeriden veya cihazın Dosyalar uygulamasından görsel belge seçilir.
+- Türkçe/Latin OCR ile metin okunur ve irsaliye alanları ayıklanır.
+- Alanlar kaydetmeden önce düzenlenebilir.
+- Kayıtlar uygulamanın belgeler klasöründeki `irsaliyeler.xlsx` dosyasına yazılır.
+- Excel dosyası paylaşım menüsüyle dışarı aktarılabilir.
 
-A few resources to get you started if this is your first Flutter project:
+Dosya seçimi JPG, JPEG, PNG, HEIC, HEIF ve WEBP görsellerini destekler. PDF desteği eklenmemiştir. iOS'ta Apple Vision, Android'de Google ML Kit OCR kullanılır.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Çalıştırma
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+flutter pub get
+flutter run
+```
+
+Uygulama iOS ve Android cihaz hedefleri için hazırlanmıştır. iOS'ta kamera ve fotoğraf izin açıklamaları `ios/Runner/Info.plist` içinde tanımlıdır.

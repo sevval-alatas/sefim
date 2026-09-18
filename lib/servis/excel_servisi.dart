@@ -120,8 +120,9 @@ class ExcelServisi {
     if (stil != null) {
       for (var i = 0; i < sutunlar.length; i++) {
         sheet
-            .cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0))
-            .cellStyle = stil;
+                .cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0))
+                .cellStyle =
+            stil;
       }
     }
 
@@ -154,8 +155,9 @@ class ExcelServisi {
   /// dosyanın adını döndürür.
   static Future<String> fotografiSakla(File kaynak, String uzanti) async {
     final gorselDizin = await _gorselDizini();
-    final temizUzanti =
-        uzanti.replaceAll('.', '').isEmpty ? 'jpg' : uzanti.replaceAll('.', '');
+    final temizUzanti = uzanti.replaceAll('.', '').isEmpty
+        ? 'jpg'
+        : uzanti.replaceAll('.', '');
     final ad = 'irsaliye_${DateTime.now().millisecondsSinceEpoch}.$temizUzanti';
     final hedef = File('${gorselDizin.path}/$ad');
     await kaynak.copy(hedef.path);
@@ -213,17 +215,20 @@ class ExcelServisi {
       TextCellValue(gorselAdi),
     ];
     sheet.appendRow(yeniSatir);
-    final sonSatirIndeks = sheet.maxRows - 1;
+    final sonSatirIndeks = sheet.maxRows - 2;
 
     final stil = _hucreStili();
     if (stil != null) {
       for (var i = 0; i < yeniSatir.length; i++) {
         sheet
-            .cell(CellIndex.indexByColumnRow(
-              columnIndex: i,
-              rowIndex: sonSatirIndeks,
-            ))
-            .cellStyle = stil;
+                .cell(
+                  CellIndex.indexByColumnRow(
+                    columnIndex: i,
+                    rowIndex: sonSatirIndeks,
+                  ),
+                )
+                .cellStyle =
+            stil;
       }
     }
 
@@ -308,10 +313,7 @@ class ExcelServisi {
 
     for (var c = 0; c < degerler.length; c++) {
       sheet.updateCell(
-        CellIndex.indexByColumnRow(
-          columnIndex: c,
-          rowIndex: sheetSatirIndeksi,
-        ),
+        CellIndex.indexByColumnRow(columnIndex: c, rowIndex: sheetSatirIndeksi),
         TextCellValue(degerler[c]),
       );
     }
