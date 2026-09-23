@@ -16,8 +16,10 @@ class OcrAyiklamaServisi {
     // -------------------------------------------------------------
     // 1. İRSALİYE NO (Örn: E-Irsaliye No: BCE2026000003093)
     // -------------------------------------------------------------
-    RegExpMatch? mNo =
-        RegExp(r'\b(BCE\s*\d{10,14})\b', caseSensitive: false).firstMatch(tumMetin);
+    RegExpMatch? mNo = RegExp(
+      r'\b(BCE\s*\d{10,14})\b',
+      caseSensitive: false,
+    ).firstMatch(tumMetin);
     mNo ??= RegExp(
       r'(?:E[- ]?Irsaliye|İrsaliye)[^\n\d]*([A-Z0-9]{13,17})',
       caseSensitive: false,
@@ -28,8 +30,9 @@ class OcrAyiklamaServisi {
     ).firstMatch(tumMetin);
 
     if (mNo != null) {
-      veri.irsaliyeNo =
-          (mNo.group(1) ?? '').replaceAll(RegExp(r'\s+'), '').toUpperCase();
+      veri.irsaliyeNo = (mNo.group(1) ?? '')
+          .replaceAll(RegExp(r'\s+'), '')
+          .toUpperCase();
     }
 
     // -------------------------------------------------------------
@@ -101,11 +104,15 @@ class OcrAyiklamaServisi {
           .replaceAll('|', '/')
           .replaceAll('!', '/');
     } else {
-      final mCTek =
-          RegExp(r'\b(c\s*\d{2})\b', caseSensitive: false).firstMatch(tumMetin);
+      final mCTek = RegExp(
+        r'\b(c\s*\d{2})\b',
+        caseSensitive: false,
+      ).firstMatch(tumMetin);
       if (mCTek != null) {
-        veri.dayanim =
-            mCTek.group(1)!.replaceAll(RegExp(r'\s+'), '').toUpperCase();
+        veri.dayanim = mCTek
+            .group(1)!
+            .replaceAll(RegExp(r'\s+'), '')
+            .toUpperCase();
       }
     }
 
@@ -123,7 +130,8 @@ class OcrAyiklamaServisi {
         final mPlk = plakaDeseni.firstMatch(hedef);
         if (mPlk != null) {
           final temizP = mPlk.group(1)!.replaceAll('O', '0');
-          final rakamsizMi = !RegExp(r'^\d+$').hasMatch(temizP.replaceAll(' ', ''));
+          final rakamsizMi = !RegExp(r'^\d+$')
+              .hasMatch(temizP.replaceAll(' ', ''));
           if (!temizP.startsWith('C') && rakamsizMi) {
             veri.plaka = temizP.replaceAll(RegExp(r'\s+'), ' ').trim();
             break;
@@ -139,7 +147,8 @@ class OcrAyiklamaServisi {
           .toList();
       for (final p in genelPlk) {
         final temizP = p.replaceAll('O', '0');
-        final rakamsizMi = !RegExp(r'^\d+$').hasMatch(temizP.replaceAll(' ', ''));
+        final rakamsizMi = !RegExp(r'^\d+$')
+            .hasMatch(temizP.replaceAll(' ', ''));
         if (!temizP.startsWith('C') && rakamsizMi) {
           veri.plaka = temizP.replaceAll(RegExp(r'\s+'), ' ').trim();
           break;
@@ -154,7 +163,8 @@ class OcrAyiklamaServisi {
       if (satirlar[i].toLowerCase().contains('beton miktar')) {
         final sonIndeks = (i + 3 < satirlar.length) ? i + 3 : satirlar.length;
         final hedef = satirlar.sublist(i, sonIndeks).join(' ');
-        final mMiktar = RegExp(r'(\d+[.,]\d+|\d+)\s*(?:m3|m³)?').firstMatch(hedef);
+        final mMiktar = RegExp(r'(\d+[.,]\d+|\d+)\s*(?:m3|m³)?')
+            .firstMatch(hedef);
         if (mMiktar != null) {
           final val = double.tryParse(mMiktar.group(1)!.replaceAll(',', '.'));
           if (val != null && val >= 1.0 && val <= 20.0) {
@@ -179,6 +189,15 @@ class OcrAyiklamaServisi {
         }
       }
     }
+
+    veri.guvenSkorlari = {
+      'irsaliyeNo': veri.irsaliyeNo.isEmpty ? 0.0 : 0.95,
+      'tarih': veri.tarih.isEmpty ? 0.0 : 0.85,
+      'zaman': veri.zaman.isEmpty ? 0.0 : 0.8,
+      'plaka': veri.plaka.isEmpty ? 0.0 : 0.75,
+      'dayanim': veri.dayanim.isEmpty ? 0.0 : 0.85,
+      'uretimMiktari': veri.uretimMiktari.isEmpty ? 0.0 : 0.8,
+    };
 
     return veri;
   }

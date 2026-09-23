@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -17,6 +18,7 @@ class ExcelServisi {
   static const String _dosyaAdi = 'irsaliyeler.xlsx';
   static const String _sayfaAdi = 'Beton İrsaliyeleri';
   static const String _noKayitDosyasi = '.irsaliye_no_kayitlari.json';
+  static Future<void> _yazmaZinciri = Future<void>.value();
 
   static const List<String> sutunlar = [
     'İrsaliye Tarihi',
@@ -136,8 +138,20 @@ class ExcelServisi {
   static Future<void> _kaydetVeYaz(Excel excel, File dosya) async {
     final bytes = excel.save();
     if (bytes != null) {
-      await dosya.writeAsBytes(bytes, flush: true);
+      final geciciDosya = File('${dosya.path}.tmp');
+      await geciciDosya.writeAsBytes(bytes, flush: true);
+      await geciciDosya.rename(dosya.path);
     }
+  }
+
+  static Future<T> _yazmayiSirala<T>(Future<T> Function() islem) {
+    final onceki = _yazmaZinciri;
+    final sonraki = onceki.then((_) => islem());
+    _yazmaZinciri = sonraki.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace __) {},
+    );
+    return sonraki;
   }
 
   /// Var olan (veya yeni oluşturulan) xlsx dosyasının File referansını verir.
@@ -148,6 +162,15 @@ class ExcelServisi {
       await _kaydetVeYaz(excel, dosya);
     }
     return dosya;
+  }
+
+  static Future<File> yedekOlustur() async {
+    final kaynak = await excelDosyasi();
+    final dizin = await _belgeDizini();
+    final yedekDizini = Directory('${dizin.path}/yedekler');
+    await yedekDizini.create(recursive: true);
+    final damga = DateTime.now().toIso8601String().replaceAll(':', '-');
+    return kaynak.copy('${yedekDizini.path}/irsaliyeler_$damga.xlsx');
   }
 
   /// Çekilen fotoğrafı, kayıtla birlikte kalıcı olması için uygulamanın
@@ -187,6 +210,11 @@ class ExcelServisi {
   /// Dönen kayıt: (eklendiMi, mesaj). `eklendiMi` false ise aynı irsaliye
   /// numarası zaten kayıtlıdır ve satır eklenmemiştir.
   static Future<(bool, String)> exceleEkle(
+    IrsaliyeVerisi veri,
+    String gorselAdi,
+  ) => _yazmayiSirala(() => _exceleEkle(veri, gorselAdi));
+
+  static Future<(bool, String)> _exceleEkle(
     IrsaliyeVerisi veri,
     String gorselAdi,
   ) async {
@@ -287,6 +315,11 @@ class ExcelServisi {
   static Future<void> kaydiGuncelle(
     int sheetSatirIndeksi,
     IrsaliyeVerisi veri,
+  ) => _yazmayiSirala(() => _kaydiGuncelle(sheetSatirIndeksi, veri));
+
+  static Future<void> _kaydiGuncelle(
+    int sheetSatirIndeksi,
+    IrsaliyeVerisi veri,
   ) async {
     final dosya = await _dosyaYolu();
     if (!await dosya.exists()) return;
@@ -327,7 +360,10 @@ class ExcelServisi {
   }
 
   /// [sheetSatirIndeksi] konumundaki satırı Excel'den tamamen siler.
-  static Future<void> kaydiSil(int sheetSatirIndeksi) async {
+  static Future<void> kaydiSil(int sheetSatirIndeksi) =>
+      _yazmayiSirala(() => _kaydiSil(sheetSatirIndeksi));
+
+  static Future<void> _kaydiSil(int sheetSatirIndeksi) async {
     final dosya = await _dosyaYolu();
     if (!await dosya.exists()) return;
 
