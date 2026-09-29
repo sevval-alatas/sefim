@@ -1,11 +1,67 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthServisi {
   AuthServisi({this.baseUrl = 'http://localhost:3000/auth'});
 
   final String baseUrl;
+
+  static const String _tokenAnahtari = 'sefim_access_token';
+  static const String _kullaniciAnahtari = 'sefim_user_json';
+
+  static String? _mevcutToken;
+  static Map<String, dynamic>? _mevcutKullanici;
+
+  static String? get mevcutToken => _mevcutToken;
+  static Map<String, dynamic>? get mevcutKullanici => _mevcutKullanici;
+  static bool get oturumAcik => _mevcutToken != null && _mevcutToken!.isNotEmpty;
+
+  /// Uygulama başlarken SharedPreferences'dan kayıtlı token'ı yükler.
+  static Future<void> baslat() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _mevcutToken = prefs.getString(_tokenAnahtari);
+      final userStr = prefs.getString(_kullaniciAnahtari);
+      if (userStr != null && userStr.isNotEmpty) {
+        final decoded = jsonDecode(userStr);
+        if (decoded is Map<String, dynamic>) {
+          _mevcutKullanici = decoded;
+        }
+      }
+    } catch (_) {
+      _mevcutToken = null;
+      _mevcutKullanici = null;
+    }
+  }
+
+  static Future<void> _tokenKaydet(
+    String token,
+    Map<String, dynamic>? user,
+  ) async {
+    _mevcutToken = token;
+    _mevcutKullanici = user;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_tokenAnahtari, token);
+      if (user != null) {
+        await prefs.setString(_kullaniciAnahtari, jsonEncode(user));
+      } else {
+        await prefs.remove(_kullaniciAnahtari);
+      }
+    } catch (_) {}
+  }
+
+  static Future<void> oturumuKapat() async {
+    _mevcutToken = null;
+    _mevcutKullanici = null;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_tokenAnahtari);
+      await prefs.remove(_kullaniciAnahtari);
+    } catch (_) {}
+  }
 
   Future<AuthSonucu> login({
     required String email,
@@ -15,7 +71,9 @@ class AuthServisi {
       'email': email,
       'password': password,
     });
-    return AuthSonucu.fromJson(yanit);
+    final sonuc = AuthSonucu.fromJson(yanit);
+    await _tokenKaydet(sonuc.accessToken, sonuc.user);
+    return sonuc;
   }
 
   Future<AuthSonucu> signup({
@@ -31,7 +89,9 @@ class AuthServisi {
         'username': username.trim(),
       if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
     });
-    return AuthSonucu.fromJson(yanit);
+    final sonuc = AuthSonucu.fromJson(yanit);
+    await _tokenKaydet(sonuc.accessToken, sonuc.user);
+    return sonuc;
   }
 
   Future<Map<String, dynamic>> _gonder(

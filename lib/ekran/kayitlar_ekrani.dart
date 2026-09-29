@@ -249,6 +249,8 @@ class _KayitlarEkraniState extends State<KayitlarEkrani> {
       '${tarih.day.toString().padLeft(2, '0')}.${tarih.month.toString().padLeft(2, '0')}.${tarih.year}';
 
   Widget _bosDurum({required bool aramaYapiliyor}) {
+    final renkler = Theme.of(context).colorScheme;
+
     return ListView(
       children: [
         SizedBox(height: MediaQuery.of(context).size.height * 0.2),
@@ -260,22 +262,25 @@ class _KayitlarEkraniState extends State<KayitlarEkrani> {
                     ? Icons.search_off_rounded
                     : Icons.inbox_outlined,
                 size: 52,
-                color: Colors.grey.shade400,
+                color: renkler.primary.withValues(alpha: 0.55),
               ),
               const SizedBox(height: 14),
               Text(
                 aramaYapiliyor ? 'Sonuç bulunamadı' : 'Henüz kayıt yok',
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.grey.shade600,
-                  fontWeight: FontWeight.w500,
+                  color: renkler.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 6),
               Text(
                 aramaYapiliyor ? 'Farklı bir arama terimi dene.' : 'Bir irsaliye fotoğrafı kaydettiğinde ya da elle\nyeni kayıt eklediğinde burada görünecek.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: renkler.onSurfaceVariant.withValues(alpha: 0.75),
+                ),
               ),
             ],
           ),
@@ -446,8 +451,9 @@ class _KayitlarEkraniState extends State<KayitlarEkrani> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
-        color: renkler.primary.withValues(alpha: 0.06),
+        color: renkler.primaryContainer.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: renkler.primary.withValues(alpha: 0.08)),
       ),
       child: Row(
         children: [
@@ -463,7 +469,10 @@ class _KayitlarEkraniState extends State<KayitlarEkrani> {
                 ),
                 Text(
                   etiket,
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: renkler.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),

@@ -12,13 +12,17 @@ import 'package:sefim/servis/ocr_ayiklama_servisi.dart';
 import 'package:sefim/servis/ocr_service.dart';
 import 'package:sefim/ekran/kayitlar_ekrani.dart';
 import 'package:sefim/router/app_router.dart';
+import 'package:sefim/servis/auth_servisi.dart';
+import 'package:sefim/servis/delivery_note_servisi.dart';
 import 'package:sefim/widget/irsaliye_alan.dart';
 
 // Excel başlıklarıyla aynı kurumsal mavi — uygulamanın kimliğini
 // ürettiği tabloyla görsel olarak eşleştiriyor.
 const Color _anaRenk = Color(0xFF1F497D);
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AuthServisi.baslat();
   runApp(const IrsaliyeApp());
 }
 
@@ -32,50 +36,69 @@ class IrsaliyeApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Sefim',
-      initialRoute: AppRouter.authRoute,
+      initialRoute: AuthServisi.oturumAcik
+          ? AppRouter.santiyeRoute
+          : AppRouter.authRoute,
       routes: AppRouter.routes(
         home: const UygulamaMenu(),
         irsaliyeOcr: const AnaSayfa(),
         onAuthenticated: (context) {
-          AppRouter.goHome(context);
+          AppRouter.goSantiyeSecim(context);
         },
       ),
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: colorScheme,
-        scaffoldBackgroundColor: const Color(0xFFF4F6F9),
+        scaffoldBackgroundColor: const Color(0xFFF5F7FB),
+        fontFamily: 'Roboto',
+        textTheme: ThemeData.light().textTheme.apply(
+          bodyColor: const Color(0xFF1B2430),
+          displayColor: const Color(0xFF1B2430),
+        ),
         appBarTheme: AppBarTheme(
-          backgroundColor: colorScheme.primary,
-          foregroundColor: Colors.white,
-          centerTitle: true,
+          backgroundColor: Colors.white,
+          foregroundColor: const Color(0xFF1B2430),
+          centerTitle: false,
           elevation: 0,
+          scrolledUnderElevation: 0,
+          titleSpacing: 16,
           titleTextStyle: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF1B2430),
           ),
+          iconTheme: const IconThemeData(color: Color(0xFF1B2430)),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: colorScheme.surfaceContainerHighest.withValues(
-            alpha: 0.35,
+            alpha: 0.38,
           ),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
             vertical: 14,
           ),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             borderSide: BorderSide.none,
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             borderSide: BorderSide.none,
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             borderSide: BorderSide(color: colorScheme.primary, width: 1.6),
           ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: Color(0xFFE53935), width: 1.2),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: Color(0xFFE53935), width: 1.4),
+          ),
+          labelStyle: const TextStyle(color: Color(0xFF475569)),
         ),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
@@ -84,29 +107,72 @@ class IrsaliyeApp extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
             ),
             textStyle: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
             minimumSize: const Size.fromHeight(54),
-            side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.4)),
+            side: BorderSide(
+              color: colorScheme.primary.withValues(alpha: 0.32),
+            ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
             textStyle: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ),
         cardTheme: CardThemeData(
           elevation: 0,
           color: Colors.white,
+          shadowColor: colorScheme.primary.withValues(alpha: 0.08),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+        dividerTheme: DividerThemeData(
+          color: colorScheme.outlineVariant,
+          thickness: 1,
+          space: 1,
+        ),
+        dialogTheme: DialogThemeData(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+          ),
+        ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: Colors.white,
+          indicatorColor: colorScheme.primary.withValues(alpha: 0.12),
+          labelTextStyle: WidgetStatePropertyAll(
+            TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          iconTheme: WidgetStatePropertyAll(
+            IconThemeData(color: colorScheme.onSurfaceVariant),
+          ),
+        ),
+        snackBarTheme: SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFF1F2937),
+          contentTextStyle: const TextStyle(color: Colors.white),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        floatingActionButtonTheme: FloatingActionButtonThemeData(
+          backgroundColor: colorScheme.primary,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
       ),
@@ -114,29 +180,41 @@ class IrsaliyeApp extends StatelessWidget {
   }
 }
 
-class UygulamaMenu extends StatelessWidget {
+class UygulamaMenu extends StatefulWidget {
   const UygulamaMenu({super.key});
 
+  @override
+  State<UygulamaMenu> createState() => _UygulamaMenuState();
+}
+
+class _UygulamaMenuState extends State<UygulamaMenu> {
+  late Future<List<IrsaliyeKaydi>> _kayitlarFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _kayitlarFuture = ExcelServisi.tumKayitlariOku();
+  }
+
+  Future<void> _yenile() async {
+    setState(() {
+      _kayitlarFuture = ExcelServisi.tumKayitlariOku();
+    });
+  }
+
   void _rotaAc(BuildContext context, String rota) {
-    Navigator.of(context).pop();
-    AppRouter.push(context, rota);
+    AppRouter.push(context, rota).then((_) => _yenile());
   }
 
   void _cikisYap(BuildContext context) {
-    Navigator.of(context).pop();
+    AuthServisi.oturumuKapat();
     AppRouter.goAuth(context);
   }
 
-  void _irsaliyeOcrAc(BuildContext context) {
-    AppRouter.push(context, AppRouter.irsaliyeRoute);
-  }
-
-  void _yapiElemanKontrolunuAc(BuildContext context) {
-    AppRouter.push(context, AppRouter.yapiElemaniRoute);
-  }
-
-  void _projeOkumayiAc(BuildContext context) {
-    AppRouter.push(context, AppRouter.projeOkumaRoute);
+  void _kayitlariAc(BuildContext context) {
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const KayitlarEkrani()))
+        .then((_) => _yenile());
   }
 
   @override
@@ -145,12 +223,22 @@ class UygulamaMenu extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sefim'),
+        title: const Text('Sefim • Şantiye Yönetim Paneli'),
         actions: [
           IconButton(
-            onPressed: () {},
+            onPressed: () => AppRouter.push(context, AppRouter.bildirimlerRoute),
             icon: const Icon(Icons.notifications_none_outlined),
-            tooltip: 'Bildirimler',
+            tooltip: 'Katılım İstekleri / Bildirimler',
+          ),
+          IconButton(
+            onPressed: () => _kayitlariAc(context),
+            icon: const Icon(Icons.table_chart_outlined),
+            tooltip: 'Kayıtlar',
+          ),
+          IconButton(
+            onPressed: _yenile,
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Yenile',
           ),
         ],
       ),
@@ -205,17 +293,44 @@ class UygulamaMenu extends StatelessWidget {
               ListTile(
                 leading: const Icon(Icons.document_scanner_outlined),
                 title: const Text('İrsaliye OCR'),
-                onTap: () => _rotaAc(context, AppRouter.irsaliyeRoute),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _rotaAc(context, AppRouter.irsaliyeRoute);
+                },
               ),
+              ListTile(
+                leading: const Icon(Icons.table_chart_outlined),
+                title: const Text('Kayıtlar & Raporlar'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _kayitlariAc(context);
+                },
+              ),
+              /*
               ListTile(
                 leading: const Icon(Icons.construction_outlined),
                 title: const Text('Yapı eleman kontrolü'),
-                onTap: () => _rotaAc(context, AppRouter.yapiElemaniRoute),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _rotaAc(context, AppRouter.yapiElemaniRoute);
+                },
               ),
+              */
               ListTile(
                 leading: const Icon(Icons.architecture_outlined),
                 title: const Text('Proje okuma'),
-                onTap: () => _rotaAc(context, AppRouter.projeOkumaRoute),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _rotaAc(context, AppRouter.projeOkumaRoute);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.business_outlined),
+                title: const Text('Şantiyeler / Şantiye Değiştir'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  AppRouter.goSantiyeSecim(context);
+                },
               ),
               const Spacer(),
               const Divider(height: 1),
@@ -230,141 +345,429 @@ class UygulamaMenu extends StatelessWidget {
         ),
       ),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 40, 24, 32),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
-              child: Column(
+        child: RefreshIndicator(
+          onRefresh: _yenile,
+          child: FutureBuilder<List<IrsaliyeKaydi>>(
+            future: _kayitlarFuture,
+            builder: (context, snapshot) {
+              final kayitlar = snapshot.data ?? [];
+              final toplamMiktar = kayitlar.fold<double>(
+                0,
+                (deger, k) =>
+                    deger +
+                    (double.tryParse(
+                          k.veri.uretimMiktari.replaceAll(',', '.'),
+                        ) ??
+                        0),
+              );
+              final kontrolBekleyen = kayitlar
+                  .where((k) => k.veri.kontrolUyarilari.isNotEmpty)
+                  .length;
+
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                 children: [
                   Container(
-                    width: 112,
-                    height: 112,
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(28),
-                      boxShadow: [
-                        BoxShadow(
-                          color: renkler.primary.withValues(alpha: 0.12),
-                          blurRadius: 24,
-                          offset: const Offset(0, 10),
+                      gradient: LinearGradient(
+                        colors: [
+                          renkler.primary,
+                          Color.lerp(
+                            renkler.primary,
+                            const Color(0xFF0E7490),
+                            0.55,
+                          )!,
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: Image.asset(
+                                'assets/sefim_logo.jpeg',
+                                width: 48,
+                                height: 48,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Hoş geldiniz, Şefim',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    'Beton irsaliyeleri ve şantiye süreçleri',
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 12.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _bannerIstatistik(
+                                '${kayitlar.length}',
+                                'Toplam İrsaliye',
+                                Icons.receipt_long_outlined,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _bannerIstatistik(
+                                '${toplamMiktar.toStringAsFixed(1)} m³',
+                                'Toplam Üretim',
+                                Icons.water_drop_outlined,
+                              ),
+                            ),
+                            if (kontrolBekleyen > 0) ...[
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _bannerIstatistik(
+                                  '$kontrolBekleyen',
+                                  'Kontrol',
+                                  Icons.warning_amber_outlined,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: () =>
+                                _rotaAc(context, AppRouter.irsaliyeRoute),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: renkler.primary,
+                            ),
+                            icon: const Icon(Icons.document_scanner_outlined),
+                            label: const Text('Hızlı İrsaliye Tara (OCR)'),
+                          ),
                         ),
                       ],
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: Image.asset(
-                        'assets/sefim_logo.jpeg',
-                        fit: BoxFit.cover,
-                      ),
-                    ),
                   ),
                   const SizedBox(height: 22),
-                  Text(
-                    'Sefim',
-                    style: TextStyle(
-                      color: renkler.primary,
-                      fontSize: 32,
-                      fontWeight: FontWeight.w800,
-                    ),
+                  const Text(
+                    'Şantiye Modülleri',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'İş süreçlerinizi tek yerden yönetin',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
-                  ),
-                  const SizedBox(height: 42),
-                  _MenuSecenegi(
+                  const SizedBox(height: 12),
+                  _ModulKarti(
                     ikon: Icons.document_scanner_outlined,
-                    baslik: 'İrsaliye OCR',
+                    baslik: 'İrsaliye OCR & Yönetimi',
                     aciklama:
-                        'İrsaliyeleri tara, bilgileri kontrol et ve kaydet',
-                    onPressed: () => _irsaliyeOcrAc(context),
+                        'Kameradan veya galeriden irsaliye tara, otomatik Excel’e kaydet',
+                    renk: renkler.primary,
+                    onPressed: () =>
+                        _rotaAc(context, AppRouter.irsaliyeRoute),
                   ),
-                  const SizedBox(height: 14),
-                  _MenuSecenegi(
+                  const SizedBox(height: 10),
+                  _ModulKarti(
+                    ikon: Icons.table_chart_outlined,
+                    baslik: 'Kayıtlı İrsaliyeler & Raporlar',
+                    aciklama:
+                        'Tüm kayıtları listele, ar filtrele, Excel paylaş ve yedekle',
+                    renk: const Color(0xFF0284C7),
+                    onPressed: () => _kayitlariAc(context),
+                  ),
+                  const SizedBox(height: 10),
+                  /*
+                  _ModulKarti(
                     ikon: Icons.construction_outlined,
                     baslik: 'Yapı Eleman Kontrolü',
-                    aciklama: 'Yapı elemanlarını kontrol etmek için yakında',
-                    onPressed: () => _yapiElemanKontrolunuAc(context),
-                    ikincil: true,
+                    aciklama:
+                        'Kolon ve yapı elemanı analizi ile referans ölçüm',
+                    renk: const Color(0xFF0D9488),
+                    onPressed: () =>
+                        _rotaAc(context, AppRouter.yapiElemaniRoute),
                   ),
-                  const SizedBox(height: 14),
-                  _MenuSecenegi(
+                  const SizedBox(height: 10),
+                  */
+                  _ModulKarti(
                     ikon: Icons.architecture_outlined,
-                    baslik: 'Proje Okuma',
-                    aciklama: 'PDF ve proje dosyalarını aç ve incele',
-                    onPressed: () => _projeOkumayiAc(context),
-                    ikincil: true,
+                    baslik: 'Proje Okuma & CAD Görüntüleyici',
+                    aciklama:
+                        'PDF, görsel, DWG ve DXF projelerini aç ve incele',
+                    renk: const Color(0xFF7C3AED),
+                    onPressed: () =>
+                        _rotaAc(context, AppRouter.projeOkumaRoute),
                   ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Son İrsaliye İşlemleri',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => _kayitlariAc(context),
+                        child: const Text('Tümünü gör'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (kayitlar.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: renkler.outlineVariant.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.inbox_outlined,
+                            color: renkler.primary,
+                            size: 28,
+                          ),
+                          const SizedBox(width: 14),
+                          const Expanded(
+                            child: Text(
+                              'Henüz kayıt bulunmuyor. İrsaliye tarayarak başlayın.',
+                              style: TextStyle(fontSize: 13.5),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    ...kayitlar.take(3).map((kayit) {
+                      final v = kayit.veri;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Card(
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(20),
+                            onTap: () => _kayitlariAc(context),
+                            child: Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: renkler.primary.withValues(
+                                        alpha: 0.08,
+                                      ),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.receipt_long_outlined,
+                                      color: renkler.primary,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          v.irsaliyeNo.isEmpty
+                                              ? 'İrsaliye No yok'
+                                              : v.irsaliyeNo,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 15,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          [
+                                            if (v.tarih.isNotEmpty) v.tarih,
+                                            if (v.plaka.isNotEmpty) v.plaka,
+                                          ].join('  •  '),
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (v.uretimMiktari.isNotEmpty)
+                                    Text(
+                                      '${v.uretimMiktari} m³',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        color: renkler.primary,
+                                      ),
+                                    ),
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
                 ],
-              ),
-            ),
+              );
+            },
           ),
         ),
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: 0,
+        onDestinationSelected: (index) {
+          if (index == 1) _kayitlariAc(context);
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home_rounded),
+            label: 'Ana Sayfa',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.table_chart_outlined),
+            selectedIcon: Icon(Icons.table_chart_rounded),
+            label: 'Kayıtlar',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _bannerIstatistik(String deger, String etiket, IconData ikon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(ikon, size: 14, color: Colors.white70),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  etiket,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 10.5,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            deger,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _MenuSecenegi extends StatelessWidget {
-  const _MenuSecenegi({
+class _ModulKarti extends StatelessWidget {
+  const _ModulKarti({
     required this.ikon,
     required this.baslik,
     required this.aciklama,
+    required this.renk,
     required this.onPressed,
-    this.ikincil = false,
   });
 
   final IconData ikon;
   final String baslik;
   final String aciklama;
+  final Color renk;
   final VoidCallback onPressed;
-  final bool ikincil;
 
   @override
   Widget build(BuildContext context) {
-    final renkler = Theme.of(context).colorScheme;
-
-    return SizedBox(
-      width: double.infinity,
-      child: FilledButton(
-        onPressed: onPressed,
-        style: FilledButton.styleFrom(
-          backgroundColor: ikincil ? Colors.white : renkler.primary,
-          foregroundColor: ikincil ? renkler.primary : Colors.white,
-          side: ikincil
-              ? BorderSide(color: renkler.primary.withValues(alpha: 0.28))
-              : null,
-          padding: const EdgeInsets.all(20),
-          alignment: Alignment.centerLeft,
-        ),
-        child: Row(
-          children: [
-            Icon(ikon, size: 30),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(baslik, style: const TextStyle(fontSize: 17)),
-                  const SizedBox(height: 4),
-                  Text(
-                    aciklama,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      color: ikincil ? Colors.grey.shade600 : Colors.white70,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ],
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onPressed,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: renk.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(ikon, color: renk, size: 26),
               ),
-            ),
-            const SizedBox(width: 8),
-            const Icon(Icons.arrow_forward_ios_rounded, size: 17),
-          ],
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      baslik,
+                      style: const TextStyle(
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      aciklama,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
+            ],
+          ),
         ),
       ),
     );
@@ -386,7 +789,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
 
   bool _ocrYapiliyor = false;
   bool _kaydediliyor = false;
-  bool _topluIsleniyor = false;
   List<String> _ocrUyarilari = [];
   late Future<List<IrsaliyeKaydi>> _sonKayitlarFuture;
 
@@ -401,7 +803,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
   final _siparisCtrl = TextEditingController();
   bool get _veriVarMi => _secilenFoto != null;
   bool get _herhangiBirIslemSuruyor =>
-      _ocrYapiliyor || _kaydediliyor || _topluIsleniyor;
+      _ocrYapiliyor || _kaydediliyor;
 
   @override
   void initState() {
@@ -621,6 +1023,28 @@ class _AnaSayfaState extends State<AnaSayfa> {
     setState(() => _kaydediliyor = true);
 
     try {
+      // 1. Backend'e gönder (DeliveryNoteServisi)
+      final deliveryServisi = DeliveryNoteServisi();
+      final backendYanit = await deliveryServisi.uploadDeliveryNote(
+        image: _secilenFoto!,
+        ekAlanlar: {
+          'tarih': veri.tarih,
+          'zaman': veri.zaman,
+          'irsaliyeNo': veri.irsaliyeNo,
+          'plaka': veri.plaka,
+          'dayanim': veri.dayanim,
+          'uretimMiktari': veri.uretimMiktari,
+          'siparisMiktari': veri.siparisMiktari,
+        },
+      );
+
+      if (!backendYanit.basarili) {
+        throw Exception(
+          'Backend kayıt hatası (HTTP ${backendYanit.statusCode}): ${backendYanit.body}',
+        );
+      }
+
+      // 2. Yerel Excel'e kaydet
       final uzanti = _secilenFoto!.path.contains('.')
           ? _secilenFoto!.path.split('.').last
           : 'jpg';
@@ -647,7 +1071,9 @@ class _AnaSayfaState extends State<AnaSayfa> {
                 size: 20,
               ),
               const SizedBox(width: 10),
-              Expanded(child: Text(mesaj)),
+              const Expanded(
+                child: Text('Backend’e ve Excel’e başarıyla kaydedildi!'),
+              ),
             ],
           ),
         ),
@@ -671,97 +1097,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
         setState(() => _kaydediliyor = false);
       }
     }
-  }
-
-  Future<void> _topluFotografSec() async {
-    final List<XFile> fotolar = await _picker.pickMultiImage(imageQuality: 90);
-    if (fotolar.isEmpty) return;
-
-    setState(() => _topluIsleniyor = true);
-
-    int eklenen = 0;
-    int atlanan = 0;
-    final List<String> notlar = [];
-
-    for (var baslangic = 0; baslangic < fotolar.length; baslangic += 2) {
-      final grup = fotolar.skip(baslangic).take(2);
-      await Future.wait(
-        grup.map((foto) async {
-          try {
-            final metin = await _ocrService.metniOku(foto.path);
-            final veri = OcrAyiklamaServisi.metindenVerileriAyikla(metin);
-            final dosya = File(foto.path);
-            final uzanti = dosya.path.contains('.')
-                ? dosya.path.split('.').last
-                : 'jpg';
-            final gorselAdi = await ExcelServisi.fotografiSakla(dosya, uzanti);
-            final (eklendi, mesaj) = await ExcelServisi.exceleEkle(
-              veri,
-              gorselAdi,
-            );
-            if (eklendi) {
-              eklenen++;
-            } else {
-              atlanan++;
-              notlar.add(mesaj);
-            }
-          } catch (e) {
-            atlanan++;
-            notlar.add('Bir fotoğraf işlenemedi: $e');
-          }
-        }),
-      );
-    }
-
-    if (!mounted) return;
-    setState(() => _topluIsleniyor = false);
-
-    await showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Toplu İşlem Tamamlandı'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('${fotolar.length} fotoğraf işlendi.'),
-              const SizedBox(height: 8),
-              Text(
-                '✓ $eklenen kayıt eklendi',
-                style: const TextStyle(
-                  color: Colors.green,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              if (atlanan > 0) ...[
-                const SizedBox(height: 4),
-                Text(
-                  '⚠ $atlanan kayıt atlandı',
-                  style: TextStyle(
-                    color: Colors.orange.shade800,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ...notlar.map(
-                  (n) => Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text('• $n', style: const TextStyle(fontSize: 12.5)),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Tamam'),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _excelPaylas() async {
@@ -1355,31 +1690,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
                 ],
               ],
             ),
-            if (_topluIsleniyor)
-              Container(
-                color: Colors.black.withValues(alpha: 0.45),
-                child: Center(
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const CircularProgressIndicator(),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Fotoğraflar işleniyor...',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: renkler.primary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+
           ],
         ),
       ),

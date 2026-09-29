@@ -164,13 +164,13 @@ class _YapiElemanKontroluEkraniState extends State<YapiElemanKontroluEkrani> {
     final yol = _fotografYolu;
     return InkWell(
       onTap: _fotografSec,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(22),
       child: Container(
         height: 260,
         decoration: BoxDecoration(
-          color: renkler.surfaceContainerHighest.withValues(alpha: 0.35),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: renkler.outlineVariant),
+          color: renkler.primaryContainer.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: renkler.outlineVariant, width: 1.2),
         ),
         clipBehavior: Clip.antiAlias,
         child: Stack(
@@ -180,17 +180,24 @@ class _YapiElemanKontroluEkraniState extends State<YapiElemanKontroluEkrani> {
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.photo_library_outlined,
-                    size: 54,
-                    color: renkler.primary,
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: renkler.primaryContainer,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Icon(
+                      Icons.photo_library_outlined,
+                      size: 42,
+                      color: renkler.primary,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   const Text('Galeriden kolon fotoğrafı seç'),
                   const SizedBox(height: 4),
                   Text(
                     'JPEG, PNG veya WebP',
-                    style: TextStyle(color: Colors.grey.shade600),
+                    style: TextStyle(color: renkler.onSurfaceVariant),
                   ),
                 ],
               )

@@ -82,7 +82,19 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.architecture_outlined, size: 68, color: renkler.primary),
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                color: renkler.primaryContainer.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(26),
+              ),
+              child: Icon(
+                Icons.architecture_outlined,
+                size: 48,
+                color: renkler.primary,
+              ),
+            ),
             const SizedBox(height: 18),
             const Text(
               'Projenizi açın',
@@ -92,7 +104,7 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
             Text(
               'PDF, görsel veya CAD dosyası seçerek projeyi incelemeye başlayın.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade600),
+              style: TextStyle(color: renkler.onSurfaceVariant),
             ),
             const SizedBox(height: 22),
             FilledButton.icon(

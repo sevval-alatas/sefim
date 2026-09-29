@@ -1,3 +1,4 @@
+
 import 'irsaliye_verisi.dart';
 
 /// Excel'deki tek bir satırı, o satırın sayfadaki gerçek konumuyla birlikte

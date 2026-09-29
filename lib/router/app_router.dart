@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 
 import 'package:sefim/ekran/auth_ekrani.dart';
+import 'package:sefim/ekran/bildirimler_ekrani.dart';
 import 'package:sefim/ekran/proje_okuma_ekrani.dart';
-import 'package:sefim/ekran/yapi_eleman_kontrolu_ekrani.dart';
+import 'package:sefim/ekran/santiye_secim_ekrani.dart';
 
 abstract final class AppRouter {
   static const authRoute = '/auth';
+  static const santiyeRoute = '/santiye-secim';
+  static const bildirimlerRoute = '/bildirimler';
   static const homeRoute = '/';
   static const irsaliyeRoute = '/irsaliye-ocr';
-  static const yapiElemaniRoute = '/yapi-eleman-kontrolu';
   static const projeOkumaRoute = '/proje-okuma';
 
   static Map<String, WidgetBuilder> routes({
@@ -18,11 +20,16 @@ abstract final class AppRouter {
   }) {
     return {
       authRoute: (context) => AuthEkrani(onAuthenticated: onAuthenticated),
+      santiyeRoute: (_) => const SantiyeSecimEkrani(),
+      bildirimlerRoute: (_) => const BildirimlerEkrani(),
       homeRoute: (_) => home,
       irsaliyeRoute: (_) => irsaliyeOcr,
-      yapiElemaniRoute: (_) => const YapiElemanKontroluEkrani(),
       projeOkumaRoute: (_) => const ProjeOkumaEkrani(),
     };
+  }
+
+  static void goSantiyeSecim(BuildContext context) {
+    Navigator.of(context).pushNamedAndRemoveUntil(santiyeRoute, (_) => false);
   }
 
   static void goHome(BuildContext context) {
