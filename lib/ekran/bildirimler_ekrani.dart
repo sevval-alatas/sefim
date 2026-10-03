@@ -1,3 +1,4 @@
+/*
 import 'package:flutter/material.dart';
 
 import 'package:sefim/servis/santiye_servisi.dart';
@@ -154,14 +155,11 @@ class _BildirimlerEkraniState extends State<BildirimlerEkrani> {
                     padding: const EdgeInsets.all(16),
                     children: [
                       ...bildirimler.map((item) {
-                        // Backend yanıt modeline esnek uyum
                         final project = item['project'] ?? item['santiye'] ?? {};
                         final user = item['applicant'] ?? item['user'] ?? {};
 
                         final projectId = (project['id'] ?? '').toString();
                         final memberId = (item['id'] ?? '').toString();
-
-
 
                         final santiyeAdi = project['name'] ?? project['adi'] ?? 'Şantiye';
                         final basvuranAdi = user['name'] ?? user['username'] ?? user['email'] ?? 'Kullanıcı';
@@ -301,3 +299,4 @@ class _BildirimlerEkraniState extends State<BildirimlerEkrani> {
     );
   }
 }
+*/

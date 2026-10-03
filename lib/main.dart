@@ -1,28 +1,22 @@
 import 'dart:io';
-
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
-
 import 'package:sefim/servis/excel_servisi.dart';
 import 'package:sefim/servis/irsaliye_kaydi.dart';
 import 'package:sefim/servis/irsaliye_verisi.dart';
 import 'package:sefim/servis/ocr_ayiklama_servisi.dart';
 import 'package:sefim/servis/ocr_service.dart';
+import 'package:sefim/servis/tema_servisi.dart';
 import 'package:sefim/ekran/kayitlar_ekrani.dart';
 import 'package:sefim/router/app_router.dart';
-import 'package:sefim/servis/auth_servisi.dart';
-import 'package:sefim/servis/delivery_note_servisi.dart';
 import 'package:sefim/widget/irsaliye_alan.dart';
 
-// Excel başlıklarıyla aynı kurumsal mavi — uygulamanın kimliğini
-// ürettiği tabloyla görsel olarak eşleştiriyor.
 const Color _anaRenk = Color(0xFF1F497D);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await AuthServisi.baslat();
   runApp(const IrsaliyeApp());
 }
 
@@ -31,153 +25,283 @@ class IrsaliyeApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = ColorScheme.fromSeed(seedColor: _anaRenk);
+    final lightScheme = ColorScheme.fromSeed(
+      seedColor: _anaRenk,
+      brightness: Brightness.light,
+    );
 
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Sefim',
-      initialRoute: AuthServisi.oturumAcik
-          ? AppRouter.santiyeRoute
-          : AppRouter.authRoute,
-      routes: AppRouter.routes(
-        home: const UygulamaMenu(),
-        irsaliyeOcr: const AnaSayfa(),
-        onAuthenticated: (context) {
-          AppRouter.goSantiyeSecim(context);
-        },
+    final darkScheme = ColorScheme.fromSeed(
+      seedColor: _anaRenk,
+      brightness: Brightness.dark,
+    );
+
+    final lightTheme = ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.light,
+      colorScheme: lightScheme,
+      scaffoldBackgroundColor: const Color(0xFFF5F7FB),
+      fontFamily: 'Roboto',
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.white,
+        foregroundColor: Color(0xFF1B2430),
+        centerTitle: false,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        titleSpacing: 16,
+        titleTextStyle: TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
+          color: Color(0xFF1B2430),
+        ),
+        iconTheme: IconThemeData(color: Color(0xFF1B2430)),
       ),
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: colorScheme,
-        scaffoldBackgroundColor: const Color(0xFFF5F7FB),
-        fontFamily: 'Roboto',
-        textTheme: ThemeData.light().textTheme.apply(
-          bodyColor: const Color(0xFF1B2430),
-          displayColor: const Color(0xFF1B2430),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: lightScheme.surfaceContainerHighest.withValues(
+          alpha: 0.38,
         ),
-        appBarTheme: AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: const Color(0xFF1B2430),
-          centerTitle: false,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          titleSpacing: 16,
-          titleTextStyle: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF1B2430),
-          ),
-          iconTheme: const IconThemeData(color: Color(0xFF1B2430)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
         ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: colorScheme.surfaceContainerHighest.withValues(
-            alpha: 0.38,
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 14,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: colorScheme.primary, width: 1.6),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: Color(0xFFE53935), width: 1.2),
-          ),
-          focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: Color(0xFFE53935), width: 1.4),
-          ),
-          labelStyle: const TextStyle(color: Color(0xFF475569)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
         ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(54),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            textStyle: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: lightScheme.primary, width: 1.6),
+        ),
+        labelStyle: const TextStyle(color: Color(0xFF475569)),
+      ),
+      cardTheme: CardThemeData(
+        elevation: 0,
+        color: Colors.white,
+        shadowColor: lightScheme.primary.withValues(alpha: 0.08),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+        ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: Colors.white,
+        indicatorColor: lightScheme.primary.withValues(alpha: 0.12),
+        labelTextStyle: WidgetStatePropertyAll(
+          TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: lightScheme.onSurface,
           ),
         ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size.fromHeight(54),
-            side: BorderSide(
-              color: colorScheme.primary.withValues(alpha: 0.32),
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            textStyle: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+        iconTheme: WidgetStatePropertyAll(
+          IconThemeData(color: lightScheme.onSurfaceVariant),
         ),
-        cardTheme: CardThemeData(
-          elevation: 0,
-          color: Colors.white,
-          shadowColor: colorScheme.primary.withValues(alpha: 0.08),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFF1F2937),
+        contentTextStyle: const TextStyle(color: Colors.white),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
         ),
-        dividerTheme: DividerThemeData(
-          color: colorScheme.outlineVariant,
-          thickness: 1,
-          space: 1,
-        ),
-        dialogTheme: DialogThemeData(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(22),
-          ),
-        ),
-        navigationBarTheme: NavigationBarThemeData(
-          backgroundColor: Colors.white,
-          indicatorColor: colorScheme.primary.withValues(alpha: 0.12),
-          labelTextStyle: WidgetStatePropertyAll(
-            TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: colorScheme.onSurface,
-            ),
-          ),
-          iconTheme: WidgetStatePropertyAll(
-            IconThemeData(color: colorScheme.onSurfaceVariant),
-          ),
-        ),
-        snackBarTheme: SnackBarThemeData(
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: const Color(0xFF1F2937),
-          contentTextStyle: const TextStyle(color: Colors.white),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        floatingActionButtonTheme: FloatingActionButtonThemeData(
-          backgroundColor: colorScheme.primary,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: lightScheme.primary,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
         ),
       ),
     );
+
+    final darkTheme = ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: darkScheme,
+      scaffoldBackgroundColor: const Color(0xFF0F172A),
+      fontFamily: 'Roboto',
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF1E293B),
+        foregroundColor: Color(0xFFF8FAFC),
+        centerTitle: false,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        titleSpacing: 16,
+        titleTextStyle: TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
+          color: Color(0xFFF8FAFC),
+        ),
+        iconTheme: IconThemeData(color: Color(0xFFF8FAFC)),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFF1E293B),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: darkScheme.primary, width: 1.6),
+        ),
+        labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
+      ),
+      cardTheme: CardThemeData(
+        elevation: 0,
+        color: const Color(0xFF1E293B),
+        shadowColor: Colors.black.withValues(alpha: 0.2),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+        ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: const Color(0xFF1E293B),
+        indicatorColor: darkScheme.primary.withValues(alpha: 0.25),
+        labelTextStyle: WidgetStatePropertyAll(
+          TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: darkScheme.onSurface,
+          ),
+        ),
+        iconTheme: WidgetStatePropertyAll(
+          IconThemeData(color: darkScheme.onSurfaceVariant),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFF334155),
+        contentTextStyle: const TextStyle(color: Colors.white),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: darkScheme.primary,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+    );
+
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: TemaServisi.instance,
+      builder: (context, themeMode, _) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Sefim',
+          themeMode: themeMode,
+          theme: lightTheme,
+          darkTheme: darkTheme,
+          initialRoute: AppRouter.homeRoute,
+          routes: AppRouter.routes(
+            home: const UygulamaMenu(),
+            irsaliyeOcr: const AnaSayfa(),
+            onAuthenticated: (context) {
+              AppRouter.goHome(context);
+            },
+          ),
+        );
+      },
+    );
   }
+}
+
+void _temaSecimDiyalogu(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (ctx) {
+      return ValueListenableBuilder<ThemeMode>(
+        valueListenable: TemaServisi.instance,
+        builder: (context, mevcutMod, _) {
+          return AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.palette_outlined),
+                SizedBox(width: 8),
+                Text('Tema Seçimi'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                RadioListTile<ThemeMode>(
+                  title: const Row(
+                    children: [
+                      Icon(Icons.light_mode_outlined, color: Colors.orange),
+                      SizedBox(width: 8),
+                      Text('Açık Tema'),
+                    ],
+                  ),
+                  value: ThemeMode.light,
+                  groupValue: mevcutMod,
+                  onChanged: (val) {
+                    if (val != null) TemaServisi.instance.temayiDegistir(val);
+                    Navigator.of(ctx).pop();
+                  },
+                ),
+                RadioListTile<ThemeMode>(
+                  title: const Row(
+                    children: [
+                      Icon(Icons.dark_mode_outlined, color: Colors.indigoAccent),
+                      SizedBox(width: 8),
+                      Text('Koyu Tema'),
+                    ],
+                  ),
+                  value: ThemeMode.dark,
+                  groupValue: mevcutMod,
+                  onChanged: (val) {
+                    if (val != null) TemaServisi.instance.temayiDegistir(val);
+                    Navigator.of(ctx).pop();
+                  },
+                ),
+                RadioListTile<ThemeMode>(
+                  title: const Row(
+                    children: [
+                      Icon(Icons.brightness_auto_outlined, color: Colors.teal),
+                      SizedBox(width: 8),
+                      Text('Sistem Varsayılanı'),
+                    ],
+                  ),
+                  value: ThemeMode.system,
+                  groupValue: mevcutMod,
+                  onChanged: (val) {
+                    if (val != null) TemaServisi.instance.temayiDegistir(val);
+                    Navigator.of(ctx).pop();
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
 }
 
 class UygulamaMenu extends StatefulWidget {
@@ -206,11 +330,6 @@ class _UygulamaMenuState extends State<UygulamaMenu> {
     AppRouter.push(context, rota).then((_) => _yenile());
   }
 
-  void _cikisYap(BuildContext context) {
-    AuthServisi.oturumuKapat();
-    AppRouter.goAuth(context);
-  }
-
   void _kayitlariAc(BuildContext context) {
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => const KayitlarEkrani()))
@@ -225,10 +344,27 @@ class _UygulamaMenuState extends State<UygulamaMenu> {
       appBar: AppBar(
         title: const Text('Sefim • Şantiye Yönetim Paneli'),
         actions: [
-          IconButton(
-            onPressed: () => AppRouter.push(context, AppRouter.bildirimlerRoute),
-            icon: const Icon(Icons.notifications_none_outlined),
-            tooltip: 'Katılım İstekleri / Bildirimler',
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: TemaServisi.instance,
+            builder: (context, mode, _) {
+              IconData icon;
+              switch (mode) {
+                case ThemeMode.light:
+                  icon = Icons.light_mode_outlined;
+                  break;
+                case ThemeMode.dark:
+                  icon = Icons.dark_mode_outlined;
+                  break;
+                case ThemeMode.system:
+                  icon = Icons.brightness_auto_outlined;
+                  break;
+              }
+              return IconButton(
+                icon: Icon(icon),
+                tooltip: 'Tema Değiştir',
+                onPressed: () => _temaSecimDiyalogu(context),
+              );
+            },
           ),
           IconButton(
             onPressed: () => _kayitlariAc(context),
@@ -306,40 +442,23 @@ class _UygulamaMenuState extends State<UygulamaMenu> {
                   _kayitlariAc(context);
                 },
               ),
-              /*
-              ListTile(
-                leading: const Icon(Icons.construction_outlined),
-                title: const Text('Yapı eleman kontrolü'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _rotaAc(context, AppRouter.yapiElemaniRoute);
-                },
-              ),
-              */
               ListTile(
                 leading: const Icon(Icons.architecture_outlined),
-                title: const Text('Proje okuma'),
+                title: const Text('Proje okuma (DWG/DXF)'),
                 onTap: () {
                   Navigator.of(context).pop();
                   _rotaAc(context, AppRouter.projeOkumaRoute);
                 },
               ),
+              const Divider(),
               ListTile(
-                leading: const Icon(Icons.business_outlined),
-                title: const Text('Şantiyeler / Şantiye Değiştir'),
+                leading: const Icon(Icons.brightness_6_outlined),
+                title: const Text('Tema Değiştir (Açık/Koyu)'),
                 onTap: () {
                   Navigator.of(context).pop();
-                  AppRouter.goSantiyeSecim(context);
+                  _temaSecimDiyalogu(context);
                 },
               ),
-              const Spacer(),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.logout_outlined),
-                title: const Text('Çıkış yap'),
-                onTap: () => _cikisYap(context),
-              ),
-              const SizedBox(height: 8),
             ],
           ),
         ),
@@ -473,7 +592,7 @@ class _UygulamaMenuState extends State<UygulamaMenu> {
                   ),
                   const SizedBox(height: 22),
                   const Text(
-                    'Şantiye Modülleri',
+                    'Aktif Modüller',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 12),
@@ -496,23 +615,11 @@ class _UygulamaMenuState extends State<UygulamaMenu> {
                     onPressed: () => _kayitlariAc(context),
                   ),
                   const SizedBox(height: 10),
-                  /*
-                  _ModulKarti(
-                    ikon: Icons.construction_outlined,
-                    baslik: 'Yapı Eleman Kontrolü',
-                    aciklama:
-                        'Kolon ve yapı elemanı analizi ile referans ölçüm',
-                    renk: const Color(0xFF0D9488),
-                    onPressed: () =>
-                        _rotaAc(context, AppRouter.yapiElemaniRoute),
-                  ),
-                  const SizedBox(height: 10),
-                  */
                   _ModulKarti(
                     ikon: Icons.architecture_outlined,
-                    baslik: 'Proje Okuma & CAD Görüntüleyici',
+                    baslik: 'Proje Okuma & CAD Görüntüleyici (DWG/DXF)',
                     aciklama:
-                        'PDF, görsel, DWG ve DXF projelerini aç ve incele',
+                        'DWG/DXF projelerini dönüştür, PDF ve görselleri aç ve incele',
                     renk: const Color(0xFF7C3AED),
                     onPressed: () =>
                         _rotaAc(context, AppRouter.projeOkumaRoute),
@@ -540,7 +647,7 @@ class _UygulamaMenuState extends State<UygulamaMenu> {
                     Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).cardColor,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: renkler.outlineVariant.withValues(alpha: 0.5),
@@ -613,7 +720,7 @@ class _UygulamaMenuState extends State<UygulamaMenu> {
                                           ].join('  •  '),
                                           style: TextStyle(
                                             fontSize: 12,
-                                            color: Colors.grey.shade600,
+                                            color: renkler.onSurfaceVariant,
                                           ),
                                         ),
                                       ],
@@ -630,7 +737,7 @@ class _UygulamaMenuState extends State<UygulamaMenu> {
                                   const SizedBox(width: 4),
                                   Icon(
                                     Icons.chevron_right_rounded,
-                                    color: Colors.grey.shade400,
+                                    color: renkler.onSurfaceVariant,
                                   ),
                                 ],
                               ),
@@ -725,6 +832,8 @@ class _ModulKarti extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final renkler = Theme.of(context).colorScheme;
+
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
@@ -758,14 +867,14 @@ class _ModulKarti extends StatelessWidget {
                       aciklama,
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey.shade600,
+                        color: renkler.onSurfaceVariant,
                       ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
+              Icon(Icons.chevron_right_rounded, color: renkler.onSurfaceVariant),
             ],
           ),
         ),
@@ -792,8 +901,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
   List<String> _ocrUyarilari = [];
   late Future<List<IrsaliyeKaydi>> _sonKayitlarFuture;
 
-  // OCR'dan ayıklanan alanları kullanıcı düzenleyebilsin diye
-  // TextEditingController'larda tutuyoruz.
   final _tarihCtrl = TextEditingController();
   final _zamanCtrl = TextEditingController();
   final _irsaliyeNoCtrl = TextEditingController();
@@ -1023,28 +1130,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
     setState(() => _kaydediliyor = true);
 
     try {
-      // 1. Backend'e gönder (DeliveryNoteServisi)
-      final deliveryServisi = DeliveryNoteServisi();
-      final backendYanit = await deliveryServisi.uploadDeliveryNote(
-        image: _secilenFoto!,
-        ekAlanlar: {
-          'tarih': veri.tarih,
-          'zaman': veri.zaman,
-          'irsaliyeNo': veri.irsaliyeNo,
-          'plaka': veri.plaka,
-          'dayanim': veri.dayanim,
-          'uretimMiktari': veri.uretimMiktari,
-          'siparisMiktari': veri.siparisMiktari,
-        },
-      );
-
-      if (!backendYanit.basarili) {
-        throw Exception(
-          'Backend kayıt hatası (HTTP ${backendYanit.statusCode}): ${backendYanit.body}',
-        );
-      }
-
-      // 2. Yerel Excel'e kaydet
       final uzanti = _secilenFoto!.path.contains('.')
           ? _secilenFoto!.path.split('.').last
           : 'jpg';
@@ -1072,7 +1157,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
               ),
               const SizedBox(width: 10),
               const Expanded(
-                child: Text('Backend’e ve Excel’e başarıyla kaydedildi!'),
+                child: Text('Excel’e başarıyla kaydedildi!'),
               ),
             ],
           ),
@@ -1301,7 +1386,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: renkler.primary.withValues(alpha: 0.10),
@@ -1327,7 +1412,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Material(
-                    color: Colors.white,
+                    color: Theme.of(context).cardColor,
                     borderRadius: BorderRadius.circular(16),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(16),
@@ -1376,7 +1461,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
                                     ].join('  •  '),
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: Colors.grey.shade600,
+                                      color: renkler.onSurfaceVariant,
                                     ),
                                   ),
                                 ],
@@ -1393,7 +1478,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
                             const SizedBox(width: 4),
                             Icon(
                               Icons.chevron_right_rounded,
-                              color: Colors.grey.shade400,
+                              color: renkler.onSurfaceVariant,
                             ),
                           ],
                         ),
@@ -1504,6 +1589,11 @@ class _AnaSayfaState extends State<AnaSayfa> {
         title: const Text('İrsaliye OCR'),
         actions: [
           IconButton(
+            onPressed: () => _temaSecimDiyalogu(context),
+            icon: const Icon(Icons.palette_outlined),
+            tooltip: 'Tema Değiştir',
+          ),
+          IconButton(
             onPressed: _kayitlariAc,
             icon: const Icon(Icons.table_chart_outlined),
             tooltip: 'Kayıtları Gör',
@@ -1528,15 +1618,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
                 const SizedBox(height: 18),
                 _sonKayitlar(renkler),
                 const SizedBox(height: 20),
-
-                // OutlinedButton.icon(
-                //   onPressed: _herhangiBirIslemSuruyor
-                //       ? null
-                //       : _topluFotografSec,
-                //   icon: const Icon(Icons.collections_outlined),
-                //   label: const Text('Birden fazla irsaliyeyi toplu işle'),
-                // ),
-                // const SizedBox(height: 16),
                 if (_ocrUyarilari.isNotEmpty && !_ocrYapiliyor) ...[
                   Card(
                     color: Colors.amber.shade50,
@@ -1582,8 +1663,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
                   ),
                   const SizedBox(height: 16),
                 ],
-
-                // OKUNAN / ELLE DÜZENLENEBİLEN ALANLAR
                 if (_veriVarMi && !_ocrYapiliyor) ...[
                   Card(
                     child: Padding(
@@ -1614,7 +1693,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
                             'Kaydetmeden önce kontrol edip gerekirse düzelt.',
                             style: TextStyle(
                               fontSize: 12.5,
-                              color: Colors.grey.shade600,
+                              color: renkler.onSurfaceVariant,
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -1690,7 +1769,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
                 ],
               ],
             ),
-
           ],
         ),
       ),

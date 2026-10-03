@@ -1,16 +1,10 @@
+/*
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:sefim/servis/auth_servisi.dart';
 
 /// Şantiye yönetimi ve üyelik işlemleri servisi.
-/// Endpoints:
-/// - GET /santiye/me
-/// - POST /santiye
-/// - POST /santiye/join-requests
-/// - GET /santiye/notifications
-/// - GET /santiye/:projectId/join-requests
-/// - PATCH /santiye/:projectId/join-requests/:memberId
 class SantiyeServisi {
   SantiyeServisi({this.baseUrl = 'http://localhost:3000/santiye'});
 
@@ -24,7 +18,6 @@ class SantiyeServisi {
     };
   }
 
-  /// Kullanıcının şantiyelerini ve üyelik durumlarını listeler (GET /santiye/me).
   Future<List<dynamic>> santiyeListele() async {
     final response = await http.get(
       Uri.parse('$baseUrl/me'),
@@ -39,7 +32,6 @@ class SantiyeServisi {
     throw Exception('Şantiyeler yüklenemedi: ${response.body}');
   }
 
-  /// Yeni şantiye oluşturur (POST /santiye).
   Future<Map<String, dynamic>> santiyeOlustur({required String name}) async {
     final response = await http.post(
       Uri.parse(baseUrl),
@@ -54,7 +46,6 @@ class SantiyeServisi {
     throw Exception('Şantiye oluşturulamadı: ${response.body}');
   }
 
-  /// Kayıt kodu ile katılım başvurusu oluşturur (POST /santiye/join-requests).
   Future<Map<String, dynamic>> katilimBasvurusuYap({required String code}) async {
     final response = await http.post(
       Uri.parse('$baseUrl/join-requests'),
@@ -69,7 +60,6 @@ class SantiyeServisi {
     throw Exception('Katılım başvurusu başarısız: ${response.body}');
   }
 
-  /// Giriş yapmış kullanıcının OWNER veya ADMIN olduğu şantiyelerdeki bekleyen katılım isteklerini getirir (GET /santiye/notifications).
   Future<List<dynamic>> bildirimleriGetir() async {
     final response = await http.get(
       Uri.parse('$baseUrl/notifications'),
@@ -84,7 +74,6 @@ class SantiyeServisi {
     throw Exception('Bildirimler yüklenemedi: ${response.body}');
   }
 
-  /// Şantiye yöneticisinin bekleyen başvuruları görmesini sağlar (GET /santiye/:projectId/join-requests).
   Future<List<dynamic>> bekleyenBasvurulariGetir(int projectId) async {
     final response = await http.get(
       Uri.parse('$baseUrl/$projectId/join-requests'),
@@ -98,11 +87,10 @@ class SantiyeServisi {
     throw Exception('Başvurular yüklenemedi: ${response.body}');
   }
 
-  /// Yönetici başvuruyu ACTIVE veya REJECTED olarak sonuçlandırır (PATCH /santiye/:projectId/join-requests/:memberId).
   Future<void> basvuruSonuclandir({
     required String projectId,
     required String memberId,
-    required String status, // 'ACTIVE' veya 'REJECTED'
+    required String status,
   }) async {
     final response = await http.patch(
       Uri.parse('$baseUrl/$projectId/join-requests/$memberId'),
@@ -118,3 +106,4 @@ class SantiyeServisi {
     }
   }
 }
+*/

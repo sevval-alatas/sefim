@@ -1,11 +1,10 @@
+/*
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:sefim/servis/auth_servisi.dart';
 
-/// İrsaliye fotoğraflarını multipart/form-data formatında backend'e
-/// ('/delivery-notes' endpoint'ine, 'photo' alan adıyla) gönderen servis.
 class DeliveryNoteServisi {
   DeliveryNoteServisi({this.baseUrl = 'http://localhost:3000'});
 
@@ -70,3 +69,4 @@ class DeliveryNoteYanit {
   final String body;
   final bool basarili;
 }
+*/

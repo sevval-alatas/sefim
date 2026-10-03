@@ -29,6 +29,12 @@ android {
         versionName = flutter.versionName
     }
 
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+        }
+    }
+
     dependencies {
         implementation("com.google.mlkit:text-recognition:16.0.1")
     }

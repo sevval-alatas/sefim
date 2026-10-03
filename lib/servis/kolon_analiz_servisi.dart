@@ -1,3 +1,4 @@
+/*
 import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:io';
@@ -91,3 +92,4 @@ class KolonAnalizServisi {
         : govde.trim();
   }
 }
+*/

@@ -1,3 +1,4 @@
+/*
 import 'package:flutter/material.dart';
 
 import 'package:sefim/router/app_router.dart';
@@ -374,7 +375,6 @@ class _SantiyeSecimEkraniState extends State<SantiyeSecimEkrani> {
                         )
                       else
                         ...santiyeler.map((item) {
-                          // Backend yanıt yapısına göre esnek okuma
                           final santiye = item['santiye'] ?? item['project'] ?? item;
                           final ad = santiye['name'] ?? santiye['adi'] ?? 'Şantiye';
                           final durum = (item['status'] ?? item['durum'] ?? 'ACTIVE').toString().toUpperCase();
@@ -495,3 +495,4 @@ class _SantiyeSecimEkraniState extends State<SantiyeSecimEkrani> {
     );
   }
 }
+*/

@@ -1,3 +1,4 @@
+/*
 import 'package:flutter/material.dart';
 
 import 'package:sefim/servis/auth_servisi.dart';
@@ -230,3 +231,4 @@ class _AuthEkraniState extends State<AuthEkrani> {
     );
   }
 }
+*/
