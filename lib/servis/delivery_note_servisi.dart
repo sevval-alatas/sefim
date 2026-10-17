@@ -3,10 +3,12 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:sefim/servis/api_config.dart';
 import 'package:sefim/servis/auth_servisi.dart';
 
 class DeliveryNoteServisi {
-  DeliveryNoteServisi({this.baseUrl = 'http://localhost:3000'});
+  DeliveryNoteServisi({String? baseUrl})
+      : baseUrl = baseUrl ?? ApiConfig.baseUrl;
 
   final String baseUrl;
 

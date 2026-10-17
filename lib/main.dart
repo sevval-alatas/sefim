@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -11,12 +12,17 @@ import 'package:sefim/servis/ocr_service.dart';
 import 'package:sefim/servis/tema_servisi.dart';
 import 'package:sefim/ekran/kayitlar_ekrani.dart';
 import 'package:sefim/router/app_router.dart';
+import 'package:sefim/servis/api_config.dart';
+import 'package:sefim/servis/cad_donusum_servisi.dart';
 import 'package:sefim/widget/irsaliye_alan.dart';
+import 'package:sefim/widget/kullanim_turu.dart';
 
 const Color _anaRenk = Color(0xFF1F497D);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await ApiConfig.yukle();
+  await CadDonusumServisi.hiveBaslat();
   runApp(const IrsaliyeApp());
 }
 
@@ -57,9 +63,7 @@ class IrsaliyeApp extends StatelessWidget {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: lightScheme.surfaceContainerHighest.withValues(
-          alpha: 0.38,
-        ),
+        fillColor: lightScheme.surfaceContainerHighest.withValues(alpha: 0.38),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 14,
@@ -82,15 +86,11 @@ class IrsaliyeApp extends StatelessWidget {
         elevation: 0,
         color: Colors.white,
         shadowColor: lightScheme.primary.withValues(alpha: 0.08),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(22),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: Colors.white,
@@ -110,16 +110,12 @@ class IrsaliyeApp extends StatelessWidget {
         behavior: SnackBarBehavior.floating,
         backgroundColor: const Color(0xFF1F2937),
         contentTextStyle: const TextStyle(color: Colors.white),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: lightScheme.primary,
         foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     );
 
@@ -168,15 +164,11 @@ class IrsaliyeApp extends StatelessWidget {
         elevation: 0,
         color: const Color(0xFF1E293B),
         shadowColor: Colors.black.withValues(alpha: 0.2),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: const Color(0xFF1E293B),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(22),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: const Color(0xFF1E293B),
@@ -196,16 +188,12 @@ class IrsaliyeApp extends StatelessWidget {
         behavior: SnackBarBehavior.floating,
         backgroundColor: const Color(0xFF334155),
         contentTextStyle: const TextStyle(color: Colors.white),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: darkScheme.primary,
         foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     );
 
@@ -214,7 +202,7 @@ class IrsaliyeApp extends StatelessWidget {
       builder: (context, themeMode, _) {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
-          title: 'Sefim',
+          title: 'Şefim',
           themeMode: themeMode,
           theme: lightTheme,
           darkTheme: darkTheme,
@@ -232,78 +220,6 @@ class IrsaliyeApp extends StatelessWidget {
   }
 }
 
-void _temaSecimDiyalogu(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (ctx) {
-      return ValueListenableBuilder<ThemeMode>(
-        valueListenable: TemaServisi.instance,
-        builder: (context, mevcutMod, _) {
-          return AlertDialog(
-            title: const Row(
-              children: [
-                Icon(Icons.palette_outlined),
-                SizedBox(width: 8),
-                Text('Tema Seçimi'),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                RadioListTile<ThemeMode>(
-                  title: const Row(
-                    children: [
-                      Icon(Icons.light_mode_outlined, color: Colors.orange),
-                      SizedBox(width: 8),
-                      Text('Açık Tema'),
-                    ],
-                  ),
-                  value: ThemeMode.light,
-                  groupValue: mevcutMod,
-                  onChanged: (val) {
-                    if (val != null) TemaServisi.instance.temayiDegistir(val);
-                    Navigator.of(ctx).pop();
-                  },
-                ),
-                RadioListTile<ThemeMode>(
-                  title: const Row(
-                    children: [
-                      Icon(Icons.dark_mode_outlined, color: Colors.indigoAccent),
-                      SizedBox(width: 8),
-                      Text('Koyu Tema'),
-                    ],
-                  ),
-                  value: ThemeMode.dark,
-                  groupValue: mevcutMod,
-                  onChanged: (val) {
-                    if (val != null) TemaServisi.instance.temayiDegistir(val);
-                    Navigator.of(ctx).pop();
-                  },
-                ),
-                RadioListTile<ThemeMode>(
-                  title: const Row(
-                    children: [
-                      Icon(Icons.brightness_auto_outlined, color: Colors.teal),
-                      SizedBox(width: 8),
-                      Text('Sistem Varsayılanı'),
-                    ],
-                  ),
-                  value: ThemeMode.system,
-                  groupValue: mevcutMod,
-                  onChanged: (val) {
-                    if (val != null) TemaServisi.instance.temayiDegistir(val);
-                    Navigator.of(ctx).pop();
-                  },
-                ),
-              ],
-            ),
-          );
-        },
-      );
-    },
-  );
-}
-
 class UygulamaMenu extends StatefulWidget {
   const UygulamaMenu({super.key});
 
@@ -318,6 +234,9 @@ class _UygulamaMenuState extends State<UygulamaMenu> {
   void initState() {
     super.initState();
     _kayitlarFuture = ExcelServisi.tumKayitlariOku();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      KullanimTuru.goster(context);
+    });
   }
 
   Future<void> _yenile() async {
@@ -342,126 +261,19 @@ class _UygulamaMenuState extends State<UygulamaMenu> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sefim • Şantiye Yönetim Paneli'),
+        title: const Text('Şefim • Şantiye Yönetim Paneli'),
         actions: [
-          ValueListenableBuilder<ThemeMode>(
-            valueListenable: TemaServisi.instance,
-            builder: (context, mode, _) {
-              IconData icon;
-              switch (mode) {
-                case ThemeMode.light:
-                  icon = Icons.light_mode_outlined;
-                  break;
-                case ThemeMode.dark:
-                  icon = Icons.dark_mode_outlined;
-                  break;
-                case ThemeMode.system:
-                  icon = Icons.brightness_auto_outlined;
-                  break;
-              }
-              return IconButton(
-                icon: Icon(icon),
-                tooltip: 'Tema Değiştir',
-                onPressed: () => _temaSecimDiyalogu(context),
-              );
-            },
+          IconButton(
+            onPressed: () => KullanimTuru.goster(context, zorla: true),
+            icon: const Icon(Icons.help_outline),
+            tooltip: 'Kullanım turu',
           ),
           IconButton(
-            onPressed: () => _kayitlariAc(context),
-            icon: const Icon(Icons.table_chart_outlined),
-            tooltip: 'Kayıtlar',
-          ),
-          IconButton(
-            onPressed: _yenile,
-            icon: const Icon(Icons.refresh_rounded),
-            tooltip: 'Yenile',
+            onPressed: () => AppRouter.push(context, AppRouter.ayarlarRoute),
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Ayarlar',
           ),
         ],
-      ),
-      drawer: Drawer(
-        child: SafeArea(
-          child: Column(
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
-                color: renkler.primary,
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.asset(
-                        'assets/sefim_logo.jpeg',
-                        width: 58,
-                        height: 58,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Sefim',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        SizedBox(height: 3),
-                        Text(
-                          'İş yönetim paneli',
-                          style: TextStyle(color: Colors.white70),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              ListTile(
-                leading: const Icon(Icons.home_outlined),
-                title: const Text('Ana sayfa'),
-                selected: true,
-                onTap: () => Navigator.of(context).pop(),
-              ),
-              ListTile(
-                leading: const Icon(Icons.document_scanner_outlined),
-                title: const Text('İrsaliye OCR'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _rotaAc(context, AppRouter.irsaliyeRoute);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.table_chart_outlined),
-                title: const Text('Kayıtlar & Raporlar'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _kayitlariAc(context);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.architecture_outlined),
-                title: const Text('Proje okuma (DWG/DXF)'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _rotaAc(context, AppRouter.projeOkumaRoute);
-                },
-              ),
-              const Divider(),
-              ListTile(
-                leading: const Icon(Icons.brightness_6_outlined),
-                title: const Text('Tema Değiştir (Açık/Koyu)'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _temaSecimDiyalogu(context);
-                },
-              ),
-            ],
-          ),
-        ),
       ),
       body: SafeArea(
         child: RefreshIndicator(
@@ -573,20 +385,6 @@ class _UygulamaMenuState extends State<UygulamaMenu> {
                             ],
                           ],
                         ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.icon(
-                            onPressed: () =>
-                                _rotaAc(context, AppRouter.irsaliyeRoute),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: renkler.primary,
-                            ),
-                            icon: const Icon(Icons.document_scanner_outlined),
-                            label: const Text('Hızlı İrsaliye Tara (OCR)'),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -599,18 +397,15 @@ class _UygulamaMenuState extends State<UygulamaMenu> {
                   _ModulKarti(
                     ikon: Icons.document_scanner_outlined,
                     baslik: 'İrsaliye OCR & Yönetimi',
-                    aciklama:
-                        'Kameradan veya galeriden irsaliye tara, otomatik Excel’e kaydet',
+                    aciklama: 'Kameradan veya galeriden irsaliye tara, otomatik Excel’e kaydet',
                     renk: renkler.primary,
-                    onPressed: () =>
-                        _rotaAc(context, AppRouter.irsaliyeRoute),
+                    onPressed: () => _rotaAc(context, AppRouter.irsaliyeRoute),
                   ),
                   const SizedBox(height: 10),
                   _ModulKarti(
                     ikon: Icons.table_chart_outlined,
                     baslik: 'Kayıtlı İrsaliyeler & Raporlar',
-                    aciklama:
-                        'Tüm kayıtları listele, ar filtrele, Excel paylaş ve yedekle',
+                    aciklama: 'Tüm kayıtları listele, ar filtrele, Excel paylaş ve yedekle',
                     renk: const Color(0xFF0284C7),
                     onPressed: () => _kayitlariAc(context),
                   ),
@@ -618,8 +413,7 @@ class _UygulamaMenuState extends State<UygulamaMenu> {
                   _ModulKarti(
                     ikon: Icons.architecture_outlined,
                     baslik: 'Proje Okuma & CAD Görüntüleyici (DWG/DXF)',
-                    aciklama:
-                        'DWG/DXF projelerini dönüştür, PDF ve görselleri aç ve incele',
+                    aciklama: 'DWG/DXF projelerini dönüştür, PDF ve görselleri aç ve incele',
                     renk: const Color(0xFF7C3AED),
                     onPressed: () =>
                         _rotaAc(context, AppRouter.projeOkumaRoute),
@@ -752,24 +546,6 @@ class _UygulamaMenuState extends State<UygulamaMenu> {
           ),
         ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: 0,
-        onDestinationSelected: (index) {
-          if (index == 1) _kayitlariAc(context);
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Ana Sayfa',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.table_chart_outlined),
-            selectedIcon: Icon(Icons.table_chart_rounded),
-            label: 'Kayıtlar',
-          ),
-        ],
-      ),
     );
   }
 
@@ -790,10 +566,7 @@ class _UygulamaMenuState extends State<UygulamaMenu> {
               Expanded(
                 child: Text(
                   etiket,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 10.5,
-                  ),
+                  style: const TextStyle(color: Colors.white70, fontSize: 10.5),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -874,7 +647,10 @@ class _ModulKarti extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(Icons.chevron_right_rounded, color: renkler.onSurfaceVariant),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: renkler.onSurfaceVariant,
+              ),
             ],
           ),
         ),
@@ -909,8 +685,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
   final _uretimCtrl = TextEditingController();
   final _siparisCtrl = TextEditingController();
   bool get _veriVarMi => _secilenFoto != null;
-  bool get _herhangiBirIslemSuruyor =>
-      _ocrYapiliyor || _kaydediliyor;
+  bool get _herhangiBirIslemSuruyor => _ocrYapiliyor || _kaydediliyor;
 
   @override
   void initState() {
@@ -1156,9 +931,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
                 size: 20,
               ),
               const SizedBox(width: 10),
-              const Expanded(
-                child: Text('Excel’e başarıyla kaydedildi!'),
-              ),
+              const Expanded(child: Text('Excel’e başarıyla kaydedildi!')),
             ],
           ),
         ),
@@ -1589,14 +1362,9 @@ class _AnaSayfaState extends State<AnaSayfa> {
         title: const Text('İrsaliye OCR'),
         actions: [
           IconButton(
-            onPressed: () => _temaSecimDiyalogu(context),
-            icon: const Icon(Icons.palette_outlined),
-            tooltip: 'Tema Değiştir',
-          ),
-          IconButton(
-            onPressed: _kayitlariAc,
-            icon: const Icon(Icons.table_chart_outlined),
-            tooltip: 'Kayıtları Gör',
+            onPressed: () => AppRouter.push(context, AppRouter.ayarlarRoute),
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Ayarlar',
           ),
           IconButton(
             onPressed: _excelPaylas,
@@ -1771,24 +1539,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
             ),
           ],
         ),
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: 0,
-        onDestinationSelected: (index) {
-          if (index == 1) _kayitlariAc();
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Ana Sayfa',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.table_chart_outlined),
-            selectedIcon: Icon(Icons.table_chart_rounded),
-            label: 'Kayıtlar',
-          ),
-        ],
       ),
     );
   }

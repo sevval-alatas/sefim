@@ -5,9 +5,11 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:sefim/servis/api_config.dart';
 
 class KolonAnalizServisi {
-  KolonAnalizServisi({this.endpoint = 'http://localhost:3000/column/analyze'});
+  KolonAnalizServisi({String? endpoint})
+      : endpoint = endpoint ?? ApiConfig.columnAnalyzeUrl;
 
   final String endpoint;
 

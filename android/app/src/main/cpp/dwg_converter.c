@@ -2,8 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef HAS_LIBREDWG
 #include <dwg.h>
 #include <dwg_api.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -14,6 +16,9 @@ int convert_dwg_to_dxf(const char *input_path, const char *output_path) {
         return -1;
     }
 
+#ifndef HAS_LIBREDWG
+    return -3;
+#else
     Dwg_Data dwg;
     Bit_Chain dat;
 
@@ -37,6 +42,7 @@ int convert_dwg_to_dxf(const char *input_path, const char *output_path) {
     dwg_free(&dwg);
 
     return write_res;
+#endif
 }
 
 #ifdef __cplusplus

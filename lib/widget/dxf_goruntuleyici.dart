@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 /// AutoCAD Standart İndeks Renkleri (Group Code 62)
@@ -38,14 +39,43 @@ class _DxfPair {
   final String value;
 }
 
+/// Açık temada sarı veya açık renkli çizim/yazıları yüksek kontrastlı ve okunaklı koyu renklere uyarlar.
+Color _renkUyarlamasi(Color? c, Color defaultColor, bool isDark) {
+  final col = c ?? defaultColor;
+  if (!isDark) {
+    final lum = col.computeLuminance();
+    // Açık temada okunmayan sarı, açık yeşil, cyan veya açık gri renkleri koyulaştır
+    if (lum > 0.38) {
+      final hsl = HSLColor.fromColor(col);
+      // Sarı/kehribar renk aralığı (Hue 35° - 75°) için yüksek kontrastlı koyu kehribar (#755100)
+      if (hsl.hue >= 35 && hsl.hue <= 75) {
+        return const Color(0xFF755100);
+      }
+      // Diğer açık renk tonları için parlaklığı okunaklı seviyeye çek
+      return hsl.withLightness(math.min(hsl.lightness, 0.28)).toColor();
+    }
+  }
+  return col;
+}
+
 abstract class DxfEntity {
   Rect get bounds;
   Color? get color;
 
-  void draw(Canvas canvas, Paint defaultPaint, {double inverseScale = 1});
+  void draw(
+    Canvas canvas,
+    Paint defaultPaint, {
+    double inverseScale = 1,
+    bool isDark = true,
+  });
 
   /// Blok yerleştirmelerinde (INSERT) varlığı döndürme ve ölçekleme
-  DxfEntity transform(Offset offset, double scaleX, double scaleY, double rotationRad);
+  DxfEntity transform(
+    Offset offset,
+    double scaleX,
+    double scaleY,
+    double rotationRad,
+  );
 }
 
 class DxfBlock {
@@ -57,7 +87,10 @@ class DxfBlock {
 
 class DxfParser {
   static List<DxfEntity> parse(String content) {
-    final lines = content.replaceAll('\r\n', '\n').replaceAll('\r', '\n').split('\n');
+    final lines = content
+        .replaceAll('\r\n', '\n')
+        .replaceAll('\r', '\n')
+        .split('\n');
     final pairs = <_DxfPair>[];
 
     for (var i = 0; i < lines.length; i++) {
@@ -123,7 +156,7 @@ class DxfParser {
               blocks[currentBlockName!] = DxfBlock(
                 currentBlockName!,
                 currentBlockBase,
-                currentBlockEntities!,
+                currentBlockEntities,
               );
             }
             currentBlockEntities = null;
@@ -132,7 +165,9 @@ class DxfParser {
           }
         }
 
-        final targetList = inBlocks ? currentBlockEntities : (inEntities ? entities : entities);
+        final targetList = inBlocks
+            ? currentBlockEntities
+            : (inEntities ? entities : entities);
         if (targetList == null) continue;
 
         switch (type) {
@@ -143,16 +178,26 @@ class DxfParser {
             i = _readRecord(pairs, i, (pMap) => _parseCircle(pMap, targetList));
             break;
           case 'LWPOLYLINE':
-            i = _readRecord(pairs, i, (pMap) => _parseLwPolyline(pMap, targetList));
+            i = _readRecord(
+              pairs,
+              i,
+              (pMap) => _parseLwPolyline(pMap, targetList),
+            );
             break;
           case 'ARC':
             i = _readRecord(pairs, i, (pMap) => _parseArc(pMap, targetList));
             break;
           case 'ELLIPSE':
-            i = _readRecord(pairs, i, (pMap) => _parseEllipse(pMap, targetList));
+            i = _readRecord(
+              pairs,
+              i,
+              (pMap) => _parseEllipse(pMap, targetList),
+            );
             break;
           case 'TEXT':
           case 'MTEXT':
+          case 'ATTRIB':
+          case 'ATTDEF':
             i = _readRecord(pairs, i, (pMap) => _parseText(pMap, targetList));
             break;
           case 'SOLID':
@@ -163,13 +208,21 @@ class DxfParser {
             i = _readRecord(pairs, i, (pMap) => _parseHatch(pMap, targetList));
             break;
           case 'DIMENSION':
-            i = _readRecord(pairs, i, (pMap) => _parseDimension(pMap, targetList));
+            i = _readRecord(
+              pairs,
+              i,
+              (pMap) => _parseDimension(pMap, targetList),
+            );
             break;
           case 'LEADER':
             i = _readRecord(pairs, i, (pMap) => _parseLeader(pMap, targetList));
             break;
           case 'INSERT':
-            i = _readRecord(pairs, i, (pMap) => _parseInsert(pMap, targetList, blocks));
+            i = _readRecord(
+              pairs,
+              i,
+              (pMap) => _parseInsert(pMap, targetList, blocks),
+            );
             break;
           case 'POLYLINE':
             oldPolylinePoints = [];
@@ -209,11 +262,17 @@ class DxfParser {
       }
     }
 
-    debugPrint('DXF parse tamamlandı. Toplam varlık: ${entities.length}, Blok sayısı: ${blocks.length}');
+    debugPrint(
+      'DXF parse tamamlandı. Toplam varlık: ${entities.length}, Blok sayısı: ${blocks.length}',
+    );
     return entities;
   }
 
-  static int _readRecord(List<_DxfPair> pairs, int startIdx, void Function(Map<int, List<String>> pMap) onRecord) {
+  static int _readRecord(
+    List<_DxfPair> pairs,
+    int startIdx,
+    void Function(Map<int, List<String>> pMap) onRecord,
+  ) {
     final recordMap = <int, List<String>>{};
     var cur = startIdx + 1;
     while (cur < pairs.length && pairs[cur].code != 0) {
@@ -227,7 +286,9 @@ class DxfParser {
 
   static double? _firstDouble(Map<int, List<String>> pMap, int code) {
     final vals = pMap[code];
-    return (vals != null && vals.isNotEmpty) ? double.tryParse(vals.first) : null;
+    return (vals != null && vals.isNotEmpty)
+        ? double.tryParse(vals.first)
+        : null;
   }
 
   static int? _firstInt(Map<int, List<String>> pMap, int code) {
@@ -251,11 +312,16 @@ class DxfParser {
     final x2 = _firstDouble(pMap, 11);
     final y2 = _firstDouble(pMap, 21);
     if (x1 != null && y1 != null && x2 != null && y2 != null) {
-      target.add(DxfLine(Offset(x1, y1), Offset(x2, y2), color: _extractColor(pMap)));
+      target.add(
+        DxfLine(Offset(x1, y1), Offset(x2, y2), color: _extractColor(pMap)),
+      );
     }
   }
 
-  static void _parseCircle(Map<int, List<String>> pMap, List<DxfEntity> target) {
+  static void _parseCircle(
+    Map<int, List<String>> pMap,
+    List<DxfEntity> target,
+  ) {
     final x = _firstDouble(pMap, 10);
     final y = _firstDouble(pMap, 20);
     final r = _firstDouble(pMap, 40);
@@ -264,21 +330,88 @@ class DxfParser {
     }
   }
 
-  static void _parseLwPolyline(Map<int, List<String>> pMap, List<DxfEntity> target) {
+  static List<Offset> _interpolateBulge(
+    Offset p1,
+    Offset p2,
+    double b, {
+    int steps = 6,
+  }) {
+    if (b.abs() < 1e-4) return [p2];
+    final dx = p2.dx - p1.dx;
+    final dy = p2.dy - p1.dy;
+    final d = math.sqrt(dx * dx + dy * dy);
+    if (d < 1e-4) return [p2];
+
+    final nx = -dy / d;
+    final ny = dx / d;
+    final mx = (p1.dx + p2.dx) / 2.0;
+    final my = (p1.dy + p2.dy) / 2.0;
+
+    final h = d * (1.0 - b * b) / (4.0 * b);
+    final cx = mx + h * nx;
+    final cy = my + h * ny;
+    final r = d * (1.0 + b * b) / (4.0 * b.abs());
+
+    var a1 = math.atan2(p1.dy - cy, p1.dx - cx);
+    var a2 = math.atan2(p2.dy - cy, p2.dx - cx);
+
+    if (b > 0) {
+      if (a2 <= a1) a2 += 2 * math.pi;
+    } else {
+      if (a2 >= a1) a2 -= 2 * math.pi;
+    }
+
+    final sweep = a2 - a1;
+    final pts = <Offset>[];
+    for (var i = 1; i <= steps; i++) {
+      final a = a1 + sweep * (i / steps);
+      pts.add(Offset(cx + r * math.cos(a), cy + r * math.sin(a)));
+    }
+    return pts;
+  }
+
+  static void _parseLwPolyline(
+    Map<int, List<String>> pMap,
+    List<DxfEntity> target,
+  ) {
     final xs = pMap[10];
     final ys = pMap[20];
     if (xs == null || ys == null) return;
     final count = math.min(xs.length, ys.length);
     if (count < 2) return;
-    final points = <Offset>[];
+    final bulges = pMap[42];
+    final rawPoints = <Offset>[];
     for (var i = 0; i < count; i++) {
       final x = double.tryParse(xs[i]);
       final y = double.tryParse(ys[i]);
-      if (x != null && y != null) points.add(Offset(x, y));
+      if (x != null && y != null) rawPoints.add(Offset(x, y));
     }
-    if (points.length < 2) return;
+    if (rawPoints.length < 2) return;
+
+    final points = <Offset>[rawPoints.first];
+    for (var i = 0; i < rawPoints.length - 1; i++) {
+      final b = (bulges != null && i < bulges.length)
+          ? (double.tryParse(bulges[i]) ?? 0.0)
+          : 0.0;
+      if (b.abs() > 1e-4) {
+        points.addAll(_interpolateBulge(rawPoints[i], rawPoints[i + 1], b));
+      } else {
+        points.add(rawPoints[i + 1]);
+      }
+    }
     final flags = _firstInt(pMap, 70) ?? 0;
-    target.add(DxfPolyline(points, closed: (flags & 1) != 0, color: _extractColor(pMap)));
+    final closed = (flags & 1) != 0;
+    if (closed && rawPoints.length >= 2) {
+      final lastB = (bulges != null && rawPoints.length - 1 < bulges.length)
+          ? (double.tryParse(bulges[rawPoints.length - 1]) ?? 0.0)
+          : 0.0;
+      if (lastB.abs() > 1e-4) {
+        points.addAll(
+          _interpolateBulge(rawPoints.last, rawPoints.first, lastB),
+        );
+      }
+    }
+    target.add(DxfPolyline(points, closed: closed, color: _extractColor(pMap)));
   }
 
   static void _parseArc(Map<int, List<String>> pMap, List<DxfEntity> target) {
@@ -299,13 +432,23 @@ class DxfParser {
     target.add(DxfPolyline(points, color: _extractColor(pMap)));
   }
 
-  static void _parseEllipse(Map<int, List<String>> pMap, List<DxfEntity> target) {
+  static void _parseEllipse(
+    Map<int, List<String>> pMap,
+    List<DxfEntity> target,
+  ) {
     final cx = _firstDouble(pMap, 10);
     final cy = _firstDouble(pMap, 20);
     final mx = _firstDouble(pMap, 11);
     final my = _firstDouble(pMap, 21);
     final ratio = _firstDouble(pMap, 40);
-    if (cx == null || cy == null || mx == null || my == null || ratio == null || ratio <= 0) return;
+    if (cx == null ||
+        cy == null ||
+        mx == null ||
+        my == null ||
+        ratio == null ||
+        ratio <= 0) {
+      return;
+    }
     final majorRadius = math.sqrt(mx * mx + my * my);
     if (majorRadius <= 0) return;
     final minorRadius = majorRadius * ratio;
@@ -324,14 +467,35 @@ class DxfParser {
       final y = cy + ex * math.sin(angle) + ey * math.cos(angle);
       points.add(Offset(x, y));
     }
-    target.add(DxfPolyline(points, closed: sweep >= 2 * math.pi - 1e-5, color: _extractColor(pMap)));
+    target.add(
+      DxfPolyline(
+        points,
+        closed: sweep >= 2 * math.pi - 1e-5,
+        color: _extractColor(pMap),
+      ),
+    );
   }
 
   static void _parseText(Map<int, List<String>> pMap, List<DxfEntity> target) {
-    final x = _firstDouble(pMap, 10);
-    final y = _firstDouble(pMap, 20);
-    final height = _firstDouble(pMap, 40) ?? 1;
-    if (x == null || y == null || height <= 0) return;
+    var x = _firstDouble(pMap, 10);
+    var y = _firstDouble(pMap, 20);
+
+    // Hizalama (Group 72/73) varsa ve Group 11/21 tanımlıysa metin konumu olarak Group 11/21 kullanılır
+    final hAlign = _firstInt(pMap, 72) ?? 0;
+    final vAlign = _firstInt(pMap, 73) ?? 0;
+    if (hAlign != 0 || vAlign != 0) {
+      final x11 = _firstDouble(pMap, 11);
+      final y21 = _firstDouble(pMap, 21);
+      if (x11 != null && y21 != null && (x11 != 0 || y21 != 0)) {
+        x = x11;
+        y = y21;
+      }
+    }
+
+    if (x == null || y == null) return;
+    final heightRaw = _firstDouble(pMap, 40);
+    final height = (heightRaw != null && heightRaw > 0) ? heightRaw : 20.0;
+
     final textParts = [...?pMap[3], ...?pMap[1]];
     final text = _temizleMetin(textParts.join());
     if (text.isEmpty) return;
@@ -355,7 +519,12 @@ class DxfParser {
     final y2 = _firstDouble(pMap, 22);
     final x3 = _firstDouble(pMap, 13) ?? x2;
     final y3 = _firstDouble(pMap, 23) ?? y2;
-    if (x0 != null && y0 != null && x1 != null && y1 != null && x2 != null && y2 != null) {
+    if (x0 != null &&
+        y0 != null &&
+        x1 != null &&
+        y1 != null &&
+        x2 != null &&
+        y2 != null) {
       target.add(
         DxfPolyline(
           [Offset(x0, y0), Offset(x1, y1), Offset(x3!, y3!), Offset(x2, y2)],
@@ -383,28 +552,35 @@ class DxfParser {
     }
   }
 
-  static void _parseDimension(Map<int, List<String>> pMap, List<DxfEntity> target) {
+  static void _parseDimension(
+    Map<int, List<String>> pMap,
+    List<DxfEntity> target,
+  ) {
     final x1 = _firstDouble(pMap, 10);
     final y1 = _firstDouble(pMap, 20);
     final x2 = _firstDouble(pMap, 11);
     final y2 = _firstDouble(pMap, 21);
     final text = _firstString(pMap, 1);
+    final dimColor = _extractColor(pMap);
     if (x1 != null && y1 != null && x2 != null && y2 != null) {
-      target.add(DxfLine(Offset(x1, y1), Offset(x2, y2), color: _extractColor(pMap) ?? Colors.yellow));
+      target.add(DxfLine(Offset(x1, y1), Offset(x2, y2), color: dimColor));
       if (text != null && text.isNotEmpty && text != '*') {
         target.add(
           DxfText(
             position: Offset((x1 + x2) / 2, (y1 + y2) / 2),
             text: text,
             height: 12,
-            color: _extractColor(pMap) ?? Colors.yellow,
+            color: dimColor,
           ),
         );
       }
     }
   }
 
-  static void _parseLeader(Map<int, List<String>> pMap, List<DxfEntity> target) {
+  static void _parseLeader(
+    Map<int, List<String>> pMap,
+    List<DxfEntity> target,
+  ) {
     final xs = pMap[10];
     final ys = pMap[20];
     if (xs == null || ys == null) return;
@@ -417,11 +593,17 @@ class DxfParser {
       if (x != null && y != null) points.add(Offset(x, y));
     }
     if (points.length >= 2) {
-      target.add(DxfPolyline(points, closed: false, color: _extractColor(pMap) ?? Colors.cyan));
+      target.add(
+        DxfPolyline(points, closed: false, color: _extractColor(pMap)),
+      );
     }
   }
 
-  static void _parseInsert(Map<int, List<String>> pMap, List<DxfEntity> target, Map<String, DxfBlock> blocks) {
+  static void _parseInsert(
+    Map<int, List<String>> pMap,
+    List<DxfEntity> target,
+    Map<String, DxfBlock> blocks,
+  ) {
     final blockName = _firstString(pMap, 2);
     if (blockName == null) return;
     final block = blocks[blockName];
@@ -446,6 +628,15 @@ class DxfParser {
         .replaceAll(r'\~', ' ')
         .replaceAll(RegExp(r'\\[HfWwAaCcTtQq][^;]*;'), '')
         .replaceAll(RegExp(r'[{}]'), '')
+        .replaceAll('%%c', 'Ø')
+        .replaceAll('%%C', 'Ø')
+        .replaceAll('%%d', '°')
+        .replaceAll('%%D', '°')
+        .replaceAll('%%p', '±')
+        .replaceAll('%%P', '±')
+        .replaceAll('%%u', '')
+        .replaceAll('%%U', '')
+        .replaceAll('ƒ', 'Ø')
         .trim();
   }
 }
@@ -462,13 +653,27 @@ class DxfLine extends DxfEntity {
   Rect get bounds => Rect.fromPoints(start, end);
 
   @override
-  void draw(Canvas canvas, Paint defaultPaint, {double inverseScale = 1}) {
-    final p = color != null ? (Paint()..color = color!..style = defaultPaint.style..strokeWidth = defaultPaint.strokeWidth) : defaultPaint;
+  void draw(
+    Canvas canvas,
+    Paint defaultPaint, {
+    double inverseScale = 1,
+    bool isDark = true,
+  }) {
+    final effectiveColor = _renkUyarlamasi(color, defaultPaint.color, isDark);
+    final p = Paint()
+      ..color = effectiveColor
+      ..style = defaultPaint.style
+      ..strokeWidth = defaultPaint.strokeWidth;
     canvas.drawLine(start, end, p);
   }
 
   @override
-  DxfEntity transform(Offset offset, double scaleX, double scaleY, double rotationRad) {
+  DxfEntity transform(
+    Offset offset,
+    double scaleX,
+    double scaleY,
+    double rotationRad,
+  ) {
     return DxfLine(
       _transformPoint(start, offset, scaleX, scaleY, rotationRad),
       _transformPoint(end, offset, scaleX, scaleY, rotationRad),
@@ -489,15 +694,39 @@ class DxfCircle extends DxfEntity {
   Rect get bounds => Rect.fromCircle(center: center, radius: radius);
 
   @override
-  void draw(Canvas canvas, Paint defaultPaint, {double inverseScale = 1}) {
-    final p = color != null ? (Paint()..color = color!..style = defaultPaint.style..strokeWidth = defaultPaint.strokeWidth) : defaultPaint;
+  void draw(
+    Canvas canvas,
+    Paint defaultPaint, {
+    double inverseScale = 1,
+    bool isDark = true,
+  }) {
+    final effectiveColor = _renkUyarlamasi(color, defaultPaint.color, isDark);
+    final p = Paint()
+      ..color = effectiveColor
+      ..style = defaultPaint.style
+      ..strokeWidth = defaultPaint.strokeWidth;
     canvas.drawCircle(center, radius, p);
   }
 
   @override
-  DxfEntity transform(Offset offset, double scaleX, double scaleY, double rotationRad) {
-    final newCenter = _transformPoint(center, offset, scaleX, scaleY, rotationRad);
-    return DxfCircle(newCenter, radius * math.max(scaleX.abs(), scaleY.abs()), color: color);
+  DxfEntity transform(
+    Offset offset,
+    double scaleX,
+    double scaleY,
+    double rotationRad,
+  ) {
+    final newCenter = _transformPoint(
+      center,
+      offset,
+      scaleX,
+      scaleY,
+      rotationRad,
+    );
+    return DxfCircle(
+      newCenter,
+      radius * math.max(scaleX.abs(), scaleY.abs()),
+      color: color,
+    );
   }
 }
 
@@ -520,9 +749,18 @@ class DxfPolyline extends DxfEntity {
   }
 
   @override
-  void draw(Canvas canvas, Paint defaultPaint, {double inverseScale = 1}) {
+  void draw(
+    Canvas canvas,
+    Paint defaultPaint, {
+    double inverseScale = 1,
+    bool isDark = true,
+  }) {
     if (points.length < 2) return;
-    final p = color != null ? (Paint()..color = color!..style = defaultPaint.style..strokeWidth = defaultPaint.strokeWidth) : defaultPaint;
+    final effectiveColor = _renkUyarlamasi(color, defaultPaint.color, isDark);
+    final p = Paint()
+      ..color = effectiveColor
+      ..style = defaultPaint.style
+      ..strokeWidth = defaultPaint.strokeWidth;
     final path = Path()..moveTo(points.first.dx, points.first.dy);
     for (final point in points.skip(1)) {
       path.lineTo(point.dx, point.dy);
@@ -532,8 +770,15 @@ class DxfPolyline extends DxfEntity {
   }
 
   @override
-  DxfEntity transform(Offset offset, double scaleX, double scaleY, double rotationRad) {
-    final newPoints = points.map((pt) => _transformPoint(pt, offset, scaleX, scaleY, rotationRad)).toList();
+  DxfEntity transform(
+    Offset offset,
+    double scaleX,
+    double scaleY,
+    double rotationRad,
+  ) {
+    final newPoints = points
+        .map((pt) => _transformPoint(pt, offset, scaleX, scaleY, rotationRad))
+        .toList();
     return DxfPolyline(newPoints, closed: closed, color: color);
   }
 }
@@ -554,6 +799,34 @@ class DxfText extends DxfEntity {
   @override
   final Color? color;
 
+  TextPainter? _cachedPainter;
+  Color? _cachedColor;
+  bool? _cachedDark;
+
+  TextPainter _getPainter(Paint defaultPaint, bool isDark) {
+    final effectiveColor = _renkUyarlamasi(color, defaultPaint.color, isDark);
+    if (_cachedPainter != null &&
+        _cachedColor == effectiveColor &&
+        _cachedDark == isDark) {
+      return _cachedPainter!;
+    }
+    _cachedColor = effectiveColor;
+    _cachedDark = isDark;
+    _cachedPainter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: effectiveColor,
+          fontSize: math.max(height, 5.0),
+          fontWeight: FontWeight.normal,
+          height: 1.1,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    return _cachedPainter!;
+  }
+
   @override
   Rect get bounds {
     final lines = text.split('\n');
@@ -570,33 +843,38 @@ class DxfText extends DxfEntity {
   }
 
   @override
-  void draw(Canvas canvas, Paint defaultPaint, {double inverseScale = 1}) {
-    final fontSize = height;
-    final textColor = color ?? defaultPaint.color;
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(
-          color: textColor,
-          fontSize: fontSize,
-          fontWeight: FontWeight.w500,
-          height: 1.1,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
+  void draw(
+    Canvas canvas,
+    Paint defaultPaint, {
+    double inverseScale = 1,
+    bool isDark = true,
+  }) {
+    final textPainter = _getPainter(defaultPaint, isDark);
 
     canvas.save();
     canvas.translate(position.dx, position.dy);
-    canvas.rotate(rotation * math.pi / 180);
+    if (rotation != 0) {
+      canvas.rotate(rotation * math.pi / 180);
+    }
     canvas.scale(1, -1);
-    textPainter.paint(canvas, Offset(0, -fontSize));
+    textPainter.paint(canvas, Offset(0, -textPainter.height));
     canvas.restore();
   }
 
   @override
-  DxfEntity transform(Offset offset, double scaleX, double scaleY, double rotationRad) {
-    final newPos = _transformPoint(position, offset, scaleX, scaleY, rotationRad);
+  DxfEntity transform(
+    Offset offset,
+    double scaleX,
+    double scaleY,
+    double rotationRad,
+  ) {
+    final newPos = _transformPoint(
+      position,
+      offset,
+      scaleX,
+      scaleY,
+      rotationRad,
+    );
     return DxfText(
       position: newPos,
       text: text,
@@ -607,7 +885,13 @@ class DxfText extends DxfEntity {
   }
 }
 
-Offset _transformPoint(Offset pt, Offset offset, double scaleX, double scaleY, double rotationRad) {
+Offset _transformPoint(
+  Offset pt,
+  Offset offset,
+  double scaleX,
+  double scaleY,
+  double rotationRad,
+) {
   final sx = pt.dx * scaleX;
   final sy = pt.dy * scaleY;
   final rx = sx * math.cos(rotationRad) - sy * math.sin(rotationRad);
@@ -626,6 +910,7 @@ class DxfGoruntuleyici extends StatefulWidget {
 
 class _DxfGoruntuleyiciState extends State<DxfGoruntuleyici> {
   final TransformationController _transformasyon = TransformationController();
+  double _seciliKalinlik = 1.2;
 
   @override
   void dispose() {
@@ -634,7 +919,8 @@ class _DxfGoruntuleyiciState extends State<DxfGoruntuleyici> {
   }
 
   void _yaklastir(double oran) {
-    final mevcut = _transformasyon.value.clone()..scaleByDouble(oran, oran, oran, 1);
+    final mevcut = _transformasyon.value.clone()
+      ..scaleByDouble(oran, oran, oran, 1);
     _transformasyon.value = mevcut;
   }
 
@@ -644,17 +930,25 @@ class _DxfGoruntuleyiciState extends State<DxfGoruntuleyici> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final appBgColor = theme.scaffoldBackgroundColor;
+    final colorScheme = theme.colorScheme;
+
     if (widget.entities.isEmpty) {
       return Container(
-        color: const Color(0xFF1E222A),
-        child: const Center(
-          child: Text('DXF içinde görüntülenebilir çizim bulunamadı.', style: TextStyle(color: Colors.white70)),
+        color: appBgColor,
+        child: Center(
+          child: Text(
+            'Çizim içinde görüntülenebilir öğe bulunamadı.',
+            style: TextStyle(color: colorScheme.onSurfaceVariant),
+          ),
         ),
       );
     }
 
     return Container(
-      color: const Color(0xFF1E222A), // AutoCAD Koyu CAD Görünüm Arka Planı
+      color: appBgColor,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final boyut = Size(
@@ -674,7 +968,14 @@ class _DxfGoruntuleyiciState extends State<DxfGoruntuleyici> {
                   boundaryMargin: const EdgeInsets.all(1000),
                   child: CustomPaint(
                     size: boyut,
-                    painter: _DxfPainter(widget.entities),
+                    painter: _DxfPainter(
+                      widget.entities,
+                      isDark: isDark,
+                      defaultColor: isDark
+                          ? Colors.white
+                          : const Color(0xFF1B2430),
+                      lineThickness: _seciliKalinlik,
+                    ),
                   ),
                 ),
               ),
@@ -682,28 +983,81 @@ class _DxfGoruntuleyiciState extends State<DxfGoruntuleyici> {
                 right: 16,
                 top: 16,
                 child: Material(
-                  color: const Color(0xFF2D323E),
+                  color: colorScheme.surface,
                   elevation: 4,
+                  shadowColor: colorScheme.shadow.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(14),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        onPressed: () => _yaklastir(1.25),
-                        icon: const Icon(Icons.add, color: Colors.white),
-                        tooltip: 'Yaklaştır',
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: colorScheme.outlineVariant.withValues(
+                          alpha: 0.5,
+                        ),
+                        width: 0.8,
                       ),
-                      IconButton(
-                        onPressed: () => _yaklastir(0.8),
-                        icon: const Icon(Icons.remove, color: Colors.white),
-                        tooltip: 'Uzaklaştır',
-                      ),
-                      IconButton(
-                        onPressed: _sifirla,
-                        icon: const Icon(Icons.fit_screen_outlined, color: Colors.white),
-                        tooltip: 'Görünümü sıfırla',
-                      ),
-                    ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          onPressed: () => _yaklastir(1.25),
+                          icon: Icon(Icons.add, color: colorScheme.onSurface),
+                          tooltip: 'Yaklaştır',
+                        ),
+                        IconButton(
+                          onPressed: () => _yaklastir(0.8),
+                          icon: Icon(
+                            Icons.remove,
+                            color: colorScheme.onSurface,
+                          ),
+                          tooltip: 'Uzaklaştır',
+                        ),
+                        IconButton(
+                          onPressed: _sifirla,
+                          icon: Icon(
+                            Icons.fit_screen_outlined,
+                            color: colorScheme.primary,
+                          ),
+                          tooltip: 'Görünümü sıfırla',
+                        ),
+                        const Divider(height: 1),
+                        PopupMenuButton<double>(
+                          icon: Icon(
+                            Icons.line_weight_outlined,
+                            size: 20,
+                            color: colorScheme.onSurface,
+                          ),
+                          tooltip: 'Çizgi Kalınlığı',
+                          initialValue: _seciliKalinlik,
+                          onSelected: (val) {
+                            setState(() => _seciliKalinlik = val);
+                          },
+                          itemBuilder: (ctx) => [
+                            CheckedPopupMenuItem<double>(
+                              value: 0.0,
+                              checked: _seciliKalinlik == 0.0,
+                              child: const Text('Saç Teli (0.0 px)'),
+                            ),
+                            CheckedPopupMenuItem<double>(
+                              value: 0.4,
+                              checked: _seciliKalinlik == 0.4,
+                              child: const Text('Çok İnce (0.4 px)'),
+                            ),
+                            CheckedPopupMenuItem<double>(
+                              value: 0.8,
+                              checked: _seciliKalinlik == 0.8,
+                              child: const Text('İnce (0.8 px)'),
+                            ),
+                            CheckedPopupMenuItem<double>(
+                              value: 1.2,
+                              checked: _seciliKalinlik == 1.2,
+                              child: const Text('Normal (1.2 px)'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -716,9 +1070,17 @@ class _DxfGoruntuleyiciState extends State<DxfGoruntuleyici> {
 }
 
 class _DxfPainter extends CustomPainter {
-  _DxfPainter(this.entities);
+  _DxfPainter(
+    this.entities, {
+    this.isDark = true,
+    this.defaultColor = Colors.white,
+    this.lineThickness = 0.0,
+  });
 
   final List<DxfEntity> entities;
+  final bool isDark;
+  final Color defaultColor;
+  final double lineThickness;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -730,10 +1092,16 @@ class _DxfPainter extends CustomPainter {
       (size.height - 64) / bounds.height,
     );
     final inverseScale = 1.0 / scale;
+
+    // lineThickness <= 0.0 ise Flutter/Skia donanımsal hairline (tam 1 fiziksel piksel) çizer.
+    final effectiveStrokeWidth = lineThickness <= 0.0
+        ? 0.0
+        : lineThickness * inverseScale;
+
     final defaultPaint = Paint()
-      ..color = Colors.white
+      ..color = defaultColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5 * inverseScale
+      ..strokeWidth = effectiveStrokeWidth
       ..isAntiAlias = true;
 
     final center = bounds.center;
@@ -742,7 +1110,12 @@ class _DxfPainter extends CustomPainter {
     canvas.translate(-center.dx, -center.dy);
 
     for (final entity in entities) {
-      entity.draw(canvas, defaultPaint, inverseScale: inverseScale);
+      entity.draw(
+        canvas,
+        defaultPaint,
+        inverseScale: inverseScale,
+        isDark: isDark,
+      );
     }
   }
 
@@ -756,5 +1129,9 @@ class _DxfPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _DxfPainter oldDelegate) => oldDelegate.entities != entities;
+  bool shouldRepaint(covariant _DxfPainter oldDelegate) =>
+      oldDelegate.entities != entities ||
+      oldDelegate.isDark != isDark ||
+      oldDelegate.defaultColor != defaultColor ||
+      oldDelegate.lineThickness != lineThickness;
 }

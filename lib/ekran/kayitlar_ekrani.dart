@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart' show XFile;
 import 'package:share_plus/share_plus.dart';
 
 import 'package:sefim/ekran/kayit_ekle_ekrani.dart';
@@ -198,7 +197,7 @@ class _KayitlarEkraniState extends State<KayitlarEkrani> {
                   ),
                 ),
                 DropdownButtonFormField<int>(
-                  value: siralama,
+                  initialValue: siralama,
                   decoration: const InputDecoration(labelText: 'Sıralama'),
                   items: const [
                     DropdownMenuItem(value: 0, child: Text('En yeni kayıtlar')),

@@ -3,10 +3,13 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:pdfx/pdfx.dart';
+import 'package:flutter/services.dart';
 
 import 'package:sefim/servis/cad_donusum_servisi.dart';
+import 'package:sefim/servis/cad_mobil_sahnesi.dart';
+import 'package:sefim/widget/cad_sahne_goruntuleyici.dart';
 import 'package:sefim/widget/dxf_goruntuleyici.dart';
+import 'package:sefim/widget/proje_pdf_goruntuleyici.dart';
 
 class ProjeOkumaEkrani extends StatefulWidget {
   const ProjeOkumaEkrani({super.key});
@@ -19,7 +22,11 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
   final CadDonusumServisi _cadServisi = CadDonusumServisi();
   String? _dosyaYolu;
   String? _dxfYolu;
+  String? _pdfYolu;
   String? _aktifProjeAdi;
+  String? _dxfParseYolu;
+  Future<List<DxfEntity>>? _dxfEntityleriFuture;
+  CadMobileScene? _mobileScene;
   bool _donusturuluyor = false;
   List<KayitliProje> _kayitliProjeler = [];
   bool _projelerYukleniyor = false;
@@ -47,65 +54,256 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
   }
 
   Future<void> _projeSec() async {
-    final sonuc = await FilePicker.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: [
-        'pdf',
-        'jpg',
-        'jpeg',
-        'png',
-        'heic',
-        'webp',
-        'dwg',
-        'dxf',
-      ],
-    );
-    final yol = sonuc.isEmpty ? null : sonuc.single.path;
+    final String? yol;
+    if (Platform.isAndroid) {
+      yol = await const MethodChannel('sefim/file_picker')
+          .invokeMethod<String>('pickDocument');
+    } else {
+      final sonuc = await FilePicker.pickFile(
+        type: FileType.custom,
+        allowedExtensions: [
+          'pdf',
+          'jpg',
+          'jpeg',
+          'png',
+          'heic',
+          'webp',
+          'dwg',
+          'dxf',
+        ],
+      );
+      yol = sonuc?.path;
+    }
     if (yol == null || !mounted) return;
 
-    final ad = yol.split(Platform.pathSeparator).last;
+    const desteklenenUzantilar = {
+      'pdf',
+      'jpg',
+      'jpeg',
+      'png',
+      'heic',
+      'webp',
+      'dwg',
+      'dxf',
+    };
+    final secilenUzanti = yol.split('.').last.toLowerCase();
+    if (!desteklenenUzantilar.contains(secilenUzanti)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Yalnızca DWG, DXF, PDF veya görsel dosyaları açılabilir.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    late final KayitliProje proje;
+    try {
+      proje = await _cadServisi.projeyiKaliciKaydet(yol);
+    } catch (e, stackTrace) {
+      debugPrint('Proje kalıcı olarak kaydedilemedi: $e\n$stackTrace');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Proje kaydedilemedi: $e')));
+      return;
+    }
+    final kaliciYol = proje.goruntulemeYolu;
+    final uzanti = kaliciYol.split('.').last.toLowerCase();
     setState(() {
-      _dosyaYolu = yol;
+      _dxfParseYolu = null;
+      _dxfEntityleriFuture = null;
+      _mobileScene = null;
+      _dosyaYolu = kaliciYol;
       _dxfYolu = null;
-      _aktifProjeAdi = ad;
+      _pdfYolu = null;
+      _aktifProjeAdi = proje.ad;
     });
 
-    if (_uzanti == 'dwg' || _uzanti == 'dxf') {
-      await _cadDosyasiniDonustur(yol);
+    if (uzanti == 'dwg' || uzanti == 'dxf') {
+      await _cadDosyasiniDonustur(
+        kaliciYol,
+        zorlaReconvert: uzanti == 'dxf',
+        projeId: proje.id,
+      );
+    } else {
+      final isPdf = uzanti == 'pdf';
+      setState(() {
+        _pdfYolu = isPdf ? kaliciYol : null;
+        _dxfYolu = uzanti == 'dxf' ? kaliciYol : null;
+      });
+      await _kayitliProjeleriYukle();
     }
   }
 
-  Future<void> _cadDosyasiniDonustur(String yol, {bool zorlaReconvert = false}) async {
+  Future<void> _cadDosyasiniDonustur(
+    String yol, {
+    bool zorlaReconvert = false,
+    String hedefFormat = 'dxf',
+    String? projeId,
+  }) async {
     setState(() => _donusturuluyor = true);
     try {
-      final dxf = await _cadServisi.dxfyeDonustur(yol, zorlaYenidenDonustur: zorlaReconvert);
+      CadMobileScene? mobileScene;
+      late final File sonuc;
+      if (hedefFormat == 'dxf' && yol.toLowerCase().endsWith('.dwg')) {
+        try {
+          final sceneResult = await _cadServisi
+              .dwgDosyasiniMobilSahneyeDonustur(yol, projeId: projeId);
+          sonuc = sceneResult.dxfFile;
+          mobileScene = sceneResult.scene;
+        } catch (error, stackTrace) {
+          debugPrint(
+            'JSON CAD sahnesi alınamadı; DXF yedeği deneniyor: '
+            '$error\n$stackTrace',
+          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'JSON önizleme alınamadı; DXF dönüştürme yedeği deneniyor.',
+                ),
+              ),
+            );
+          }
+          sonuc = await _cadServisi.dxfyeDonustur(
+            yol,
+            zorlaYenidenDonustur: zorlaReconvert,
+            format: hedefFormat,
+            projeId: projeId,
+          );
+        }
+      } else {
+        sonuc = await _cadServisi.dxfyeDonustur(
+          yol,
+          zorlaYenidenDonustur: zorlaReconvert,
+          format: hedefFormat,
+          projeId: projeId,
+        );
+      }
       if (!mounted) return;
+      final isPdf = sonuc.path.toLowerCase().endsWith('.pdf');
       setState(() {
-        _dxfYolu = dxf.path;
+        _dxfParseYolu = null;
+        _dxfEntityleriFuture = null;
+        _mobileScene = mobileScene;
+        if (isPdf) {
+          _pdfYolu = sonuc.path;
+          _dxfYolu = null;
+        } else {
+          _dxfYolu = sonuc.path;
+          _pdfYolu = null;
+        }
         _donusturuluyor = false;
       });
       await _kayitliProjeleriYukle();
     } catch (e, stackTrace) {
       debugPrint('CAD dönüşüm hatası: $e\n$stackTrace');
+      await _kayitliProjeleriYukle();
       if (!mounted) return;
       setState(() {
         _dosyaYolu = null;
         _dxfYolu = null;
+        _pdfYolu = null;
         _donusturuluyor = false;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(
-        content: Text('Dönüştürme Hatası: $e'),
-        duration: const Duration(seconds: 5),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Dönüştürme Hatası: $e'),
+          duration: const Duration(seconds: 5),
+        ),
+      );
     }
   }
 
-  void _kayitliProjeyiAc(KayitliProje proje) {
+  Future<void> _gorunumModunuDegistir() async {
+    final suAnkiPdf = _pdfYolu != null;
+    final hedefFormat = suAnkiPdf ? 'dxf' : 'pdf';
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          suAnkiPdf
+              ? 'CAD DXF Moduna geçiliyor...'
+              : 'Vektörel PDF Moduna geçiliyor...',
+        ),
+        duration: const Duration(milliseconds: 900),
+      ),
+    );
+
+    final aktifAd = _aktifProjeAdi;
+    final aktifProje = _kayitliProjeler.cast<KayitliProje?>().firstWhere(
+      (proje) => proje?.ad == aktifAd,
+      orElse: () => null,
+    );
+
+    // Aktif dosya DWG ise hedef formatta dönüştür veya önbellekten al
+    final aktifDwg =
+        _dosyaYolu != null && _dosyaYolu!.toLowerCase().endsWith('.dwg')
+        ? _dosyaYolu!
+        : null;
+
+    if (aktifDwg != null) {
+      await _cadDosyasiniDonustur(
+        aktifDwg,
+        hedefFormat: hedefFormat,
+        projeId: aktifProje?.id,
+      );
+      return;
+    }
+
+    // Kayıtlı proje içindeki diğer dosya yolunu kontrol et
+    if (aktifProje != null) {
+      final dwgYolu = aktifProje.dwgYolu;
+      if (dwgYolu != null && File(dwgYolu).existsSync()) {
+        await _cadDosyasiniDonustur(
+          dwgYolu,
+          hedefFormat: hedefFormat,
+          projeId: aktifProje.id,
+        );
+        return;
+      }
+    }
+
+    if (suAnkiPdf && _dxfYolu != null && File(_dxfYolu!).existsSync()) {
+      setState(() => _pdfYolu = null);
+    } else if (!suAnkiPdf && _pdfYolu != null && File(_pdfYolu!).existsSync()) {
+      setState(() => _dxfYolu = null);
+    }
+  }
+
+  Future<void> _kayitliProjeyiAc(KayitliProje proje) async {
+    final hedefYol = proje.goruntulemeYolu;
+    final uzanti = hedefYol.split('.').last.toLowerCase();
+    final kayitliSahne = await _cadServisi.kayitliMobilSahneyiGetir(proje.id);
+    if (!mounted) return;
+
+    if (uzanti == 'dwg') {
+      if (kayitliSahne != null) {
+        setState(() {
+          _dosyaYolu = hedefYol;
+          _pdfYolu = null;
+          _dxfYolu = proje.dxfYolu;
+          _mobileScene = kayitliSahne;
+          _aktifProjeAdi = proje.ad;
+          _donusturuluyor = false;
+        });
+        return;
+      }
+      setState(() {
+        _dosyaYolu = hedefYol;
+        _aktifProjeAdi = proje.ad;
+      });
+      await _cadDosyasiniDonustur(hedefYol, projeId: proje.id);
+      return;
+    }
+    final isPdf = proje.pdfMi || uzanti == 'pdf';
+    final isDxf = uzanti == 'dxf';
     setState(() {
-      _dosyaYolu = proje.dxfYolu;
-      _dxfYolu = proje.dxfYolu;
+      _dosyaYolu = hedefYol;
+      _pdfYolu = isPdf ? hedefYol : null;
+      _dxfYolu = isDxf ? hedefYol : null;
+      _mobileScene = isDxf ? kayitliSahne : null;
       _aktifProjeAdi = proje.ad;
       _donusturuluyor = false;
     });
@@ -116,7 +314,9 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Projeyi Sil'),
-        content: Text('"${proje.ad}" isimli kayıtlı proje yerel depolamadan silinsin mi?'),
+        content: Text(
+          '"${proje.ad}" isimli kayıtlı proje yerel depolamadan silinsin mi?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -133,10 +333,12 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
 
     if (onay == true) {
       await _cadServisi.kayitliProjeyiSil(proje.id);
-      if (_dxfYolu == proje.dxfYolu) {
+      if (_dosyaYolu == proje.goruntulemeYolu) {
         setState(() {
           _dosyaYolu = null;
           _dxfYolu = null;
+          _pdfYolu = null;
+          _mobileScene = null;
           _aktifProjeAdi = null;
         });
       }
@@ -162,7 +364,7 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
                 children: [
                   Icon(Icons.dns_outlined),
                   SizedBox(width: 8),
-                  Text('Python API Ayarları'),
+                  Text('CAD API Ayarları'),
                 ],
               ),
               content: Column(
@@ -170,19 +372,35 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'DWG dosyalarını DXF\'e dönüştürmek için kullanılan Python FastAPI servis adresi:',
+                    'DWG dosyalarını DXF\'e dönüştürmek için kullanılan CAD servis adresi:',
                     style: TextStyle(fontSize: 13),
                   ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: controller,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'API Sunucu URL',
-                      hintText: 'http://localhost:8000',
-                      prefixIcon: Icon(Icons.link),
+                      hintText: CadDonusumServisi.varsayilanApiUrl(),
+                      prefixIcon: const Icon(Icons.link),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: () async {
+                      await _cadServisi.apiAdresiniSifirla();
+                      controller.text = CadDonusumServisi.varsayilanApiUrl();
+                      setDialogState(() {
+                        testSonucu =
+                            '✅ Varsayılan adrese (${CadDonusumServisi.varsayilanApiUrl()}) sıfırlandı.';
+                      });
+                    },
+                    icon: const Icon(Icons.restore, size: 16),
+                    label: const Text(
+                      'Varsayılan sunucuya sıfırla',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   if (testEdiliyor)
                     const Row(
                       children: [
@@ -201,7 +419,11 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: testSonucu!.contains('başarılı') ? Colors.green : Colors.red,
+                        color:
+                            testSonucu!.contains('başarılı') ||
+                                testSonucu!.contains('sıfırlandı')
+                            ? Colors.green
+                            : Colors.red,
                       ),
                     ),
                 ],
@@ -215,7 +437,9 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
                             testEdiliyor = true;
                             testSonucu = null;
                           });
-                          final basarili = await _cadServisi.apiSunucusuTestEt(controller.text.trim());
+                          final basarili = await _cadServisi.apiSunucusuTestEt(
+                            controller.text.trim(),
+                          );
                           setDialogState(() {
                             testEdiliyor = false;
                             testSonucu = basarili
@@ -227,11 +451,16 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
                 ),
                 FilledButton(
                   onPressed: () async {
-                    await _cadServisi.apiAdresiniGuncelle(controller.text.trim());
+                    final scaffoldMessenger = ScaffoldMessenger.of(context);
+                    await _cadServisi.apiAdresiniGuncelle(
+                      controller.text.trim(),
+                    );
                     if (ctx.mounted) Navigator.of(ctx).pop();
                     if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('API adresi güncellendi.')),
+                      scaffoldMessenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('API adresi güncellendi.'),
+                        ),
                       );
                     }
                   },
@@ -277,9 +506,12 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'DWG, DXF, PDF veya görsel dosyalarınızı açabilir, dönüştürülmüş projelerinize internet olmadan erişebilirsiniz.',
+                    'DWG, DXF veya CAD çizim dosyalarınızı açabilir, kayıtlı projelerinize çevrimdışı erişebilirsiniz.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: renkler.onSurfaceVariant, fontSize: 13),
+                    style: TextStyle(
+                      color: renkler.onSurfaceVariant,
+                      fontSize: 13,
+                    ),
                   ),
                   const SizedBox(height: 18),
                   FilledButton.icon(
@@ -298,12 +530,19 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
               Expanded(
                 child: Row(
                   children: [
-                    const Icon(Icons.offline_pin, color: Colors.green, size: 20),
+                    const Icon(
+                      Icons.offline_pin,
+                      color: Colors.green,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Kayıtlı Projeler (Çevrimdışı Erişilebilir)',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -331,7 +570,11 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   children: [
-                    Icon(Icons.cloud_done_outlined, size: 40, color: renkler.outline),
+                    Icon(
+                      Icons.cloud_done_outlined,
+                      size: 40,
+                      color: renkler.outline,
+                    ),
                     const SizedBox(height: 8),
                     const Text(
                       'Henüz kaydedilmiş bir proje yok.',
@@ -341,7 +584,10 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
                     Text(
                       'Dönüştürülen veya açılan DWG/DXF projeleriniz buraya otomatik kaydedilir ve internet olmadan açılabilir.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 12, color: renkler.onSurfaceVariant),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: renkler.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -352,7 +598,7 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: _kayitliProjeler.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (_, index) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final p = _kayitliProjeler[index];
                 final kb = (p.dosyaBoyutu / 1024).toStringAsFixed(1);
@@ -361,7 +607,10 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
 
                 return Card(
                   child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     leading: CircleAvatar(
                       backgroundColor: Colors.green.withValues(alpha: 0.15),
                       child: const Icon(Icons.offline_pin, color: Colors.green),
@@ -372,13 +621,19 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
                     ),
                     subtitle: Text(
                       'Kayıt: $tarihStr • $kb KB • Çevrimdışı Hazır',
-                      style: TextStyle(fontSize: 12, color: renkler.onSurfaceVariant),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: renkler.onSurfaceVariant,
+                      ),
                     ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.redAccent,
+                          ),
                           tooltip: 'Sil',
                           onPressed: () => _kayitliProjeyiSil(p),
                         ),
@@ -401,11 +656,24 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
   Widget _dosyaGoruntule(ColorScheme renkler) {
     final yol = _dosyaYolu!;
     if (_donusturuluyor) return _donusumDurumu(renkler);
+
+    // 1. DXF formatı ise -> DXF Görüntüleyici ile açın (yazılar temiz, çizgiler ince)
+    if (_dxfYolu != null && _pdfYolu == null) {
+      return _dxfGoruntule(renkler);
+    }
+
+    // 2. PDF formatı ise -> Fallback PDF Görüntüleyici ile açın (A0 Vektörel PDF, sonsuz zoom imkanı)
+    if (_pdfYolu != null || _uzanti == 'pdf') {
+      final gosterilecekPdf = _pdfYolu ?? yol;
+      return ProjePdfGoruntuleyici(
+        pdfPath: gosterilecekPdf,
+        baslik: _aktifProjeAdi,
+        embedded: true,
+      );
+    }
+
+    // 2. Diğer dosya formatları
     switch (_uzanti) {
-      case 'pdf':
-        return PdfViewPinch(
-          controller: PdfControllerPinch(document: PdfDocument.openFile(yol)),
-        );
       case 'jpg':
       case 'jpeg':
       case 'png':
@@ -417,7 +685,25 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
           child: Center(child: Image.file(File(yol))),
         );
       case 'dwg':
+        if (_dxfYolu == null && _pdfYolu == null) {
+          return _donusumDurumu(renkler);
+        }
+        if (_pdfYolu != null) {
+          return ProjePdfGoruntuleyici(
+            pdfPath: _pdfYolu!,
+            baslik: _aktifProjeAdi,
+            embedded: true,
+          );
+        }
+        return _dxfGoruntule(renkler);
       case 'dxf':
+        if (_pdfYolu != null) {
+          return ProjePdfGoruntuleyici(
+            pdfPath: _pdfYolu!,
+            baslik: _aktifProjeAdi,
+            embedded: true,
+          );
+        }
         if (_dxfYolu == null) return _donusumDurumu(renkler);
         return _dxfGoruntule(renkler);
       default:
@@ -433,14 +719,14 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
           CircularProgressIndicator(color: renkler.primary),
           const SizedBox(height: 18),
           const Text(
-            'DWG dosyası dönüştürülüyor...',
+            'Çizim hazırlanıyor...',
             style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
           ),
           const SizedBox(height: 8),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 32),
             child: Text(
-              'Python API veya yerel kütüphaneler kullanılarak DXF oluşturuluyor. Tamamlandığında uygulama içine kaydedilecektir.',
+              'CAD çizimi işleniyor ve optimize ediliyor. Tamamlandığında yüksek çözünürlüklü vektörel çizim olarak açılacaktır.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: Colors.grey),
             ),
@@ -451,15 +737,13 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
   }
 
   Widget _dxfGoruntule(ColorScheme renkler) {
+    final scene = _mobileScene;
+    if (scene != null) {
+      return CadSahneGoruntuleyici(scene: scene);
+    }
+    final dxfYolu = _dxfYolu!;
     return FutureBuilder<List<DxfEntity>>(
-      future: File(_dxfYolu!).readAsBytes().then((bytes) {
-        final content = utf8.decode(bytes, allowMalformed: true);
-        debugPrint('DXF dosya yolu: $_dxfYolu');
-        debugPrint('DXF içerik uzunluğu: ${content.length}');
-        final entities = DxfParser.parse(content);
-        debugPrint('Parse edilen toplam entity sayısı: ${entities.length}');
-        return entities;
-      }),
+      future: _dxfEntityleriniGetir(dxfYolu),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           debugPrint('DXF parse hatası: ${snapshot.error}');
@@ -489,6 +773,21 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
     );
   }
 
+  Future<List<DxfEntity>> _dxfEntityleriniGetir(String yol) {
+    if (_dxfParseYolu != yol || _dxfEntityleriFuture == null) {
+      _dxfParseYolu = yol;
+      _dxfEntityleriFuture = File(yol).readAsBytes().then((bytes) {
+        final content = utf8.decode(bytes, allowMalformed: true);
+        debugPrint('DXF dosya yolu: $yol');
+        debugPrint('DXF içerik uzunluğu: ${content.length}');
+        final entities = DxfParser.parse(content);
+        debugPrint('Parse edilen toplam entity sayısı: ${entities.length}');
+        return entities;
+      });
+    }
+    return _dxfEntityleriFuture!;
+  }
+
   Widget _cadBeklemeDurumu(ColorScheme renkler, String uzanti) {
     return Center(
       child: Padding(
@@ -505,7 +804,7 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'PDF, görsel ve DXF dosyaları kullanılabilir.',
+              'DWG, DXF ve CAD çizim dosyaları kullanılabilir.',
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 18),
@@ -523,6 +822,7 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
   @override
   Widget build(BuildContext context) {
     final renkler = Theme.of(context).colorScheme;
+    final compactAppBar = MediaQuery.sizeOf(context).width < 400;
 
     return Scaffold(
       appBar: AppBar(
@@ -530,25 +830,66 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(_aktifProjeAdi ?? 'Proje Okuma'),
+            Text(
+              _aktifProjeAdi ?? 'Proje Okuma',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
             if (_dxfYolu != null)
               const Row(
                 children: [
                   Icon(Icons.offline_pin, size: 12, color: Colors.green),
                   SizedBox(width: 4),
-                  Text(
-                    'Kayıtlı Proje • Çevrimdışı Erişilebilir',
-                    style: TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.w600),
+                  Expanded(
+                    child: Text(
+                      'Kayıtlı Proje • Çevrimdışı Erişilebilir',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.green,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ],
               ),
           ],
         ),
         actions: [
+          if (_dosyaYolu != null)
+            compactAppBar
+                ? IconButton(
+                    onPressed: _donusturuluyor ? null : _gorunumModunuDegistir,
+                    tooltip: _pdfYolu != null
+                        ? 'DXF çizime geç'
+                        : 'Vektörel PDF’ye geç',
+                    icon: Icon(
+                      _pdfYolu != null
+                          ? Icons.architecture_outlined
+                          : Icons.picture_as_pdf_outlined,
+                    ),
+                  )
+                : TextButton.icon(
+                    onPressed: _donusturuluyor ? null : _gorunumModunuDegistir,
+                    icon: Icon(
+                      _pdfYolu != null
+                          ? Icons.architecture_outlined
+                          : Icons.picture_as_pdf_outlined,
+                      size: 18,
+                    ),
+                    label: Text(
+                      _pdfYolu != null ? 'DXF Çizim' : 'Vektörel PDF',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
           IconButton(
             onPressed: _apiAyarlariniGoster,
             icon: const Icon(Icons.dns_outlined),
-            tooltip: 'Python API Ayarları',
+            tooltip: 'CAD API Ayarları',
           ),
           IconButton(
             onPressed: _projeSec,
@@ -563,8 +904,11 @@ class _ProjeOkumaEkraniState extends State<ProjeOkumaEkrani> {
           : FloatingActionButton.extended(
               onPressed: () {
                 setState(() {
+                  _dxfParseYolu = null;
+                  _dxfEntityleriFuture = null;
                   _dosyaYolu = null;
                   _dxfYolu = null;
+                  _pdfYolu = null;
                   _aktifProjeAdi = null;
                 });
                 _kayitliProjeleriYukle();

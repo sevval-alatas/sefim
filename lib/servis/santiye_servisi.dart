@@ -2,11 +2,13 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:sefim/servis/api_config.dart';
 import 'package:sefim/servis/auth_servisi.dart';
 
 /// Şantiye yönetimi ve üyelik işlemleri servisi.
 class SantiyeServisi {
-  SantiyeServisi({this.baseUrl = 'http://localhost:3000/santiye'});
+  SantiyeServisi({String? baseUrl})
+      : baseUrl = baseUrl ?? ApiConfig.santiyeUrl;
 
   final String baseUrl;
 

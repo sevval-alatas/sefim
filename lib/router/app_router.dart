@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-
+import 'package:sefim/ekran/ayarlar_ekrani.dart';
 import 'package:sefim/ekran/proje_okuma_ekrani.dart';
 
 abstract final class AppRouter {
   static const homeRoute = '/';
   static const irsaliyeRoute = '/irsaliye-ocr';
   static const projeOkumaRoute = '/proje-okuma';
+  static const ayarlarRoute = '/ayarlar';
 
   static Map<String, WidgetBuilder> routes({
     required Widget home,
@@ -16,6 +17,7 @@ abstract final class AppRouter {
       homeRoute: (_) => home,
       irsaliyeRoute: (_) => irsaliyeOcr,
       projeOkumaRoute: (_) => const ProjeOkumaEkrani(),
+      ayarlarRoute: (_) => const AyarlarEkrani(),
     };
   }
 

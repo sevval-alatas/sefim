@@ -12,11 +12,11 @@ Beton irsaliyelerini mobil cihazdan okuyup Excel'e aktaran Flutter uygulaması.
 - Kayıtlar uygulamanın belgeler klasöründeki `irsaliyeler.xlsx` dosyasına yazılır.
 - Excel dosyası paylaşım menüsüyle dışarı aktarılabilir.
 - Proje Okuma ekranında PDF ve görsel proje dosyaları açılıp yakınlaştırılabilir.
-- DWG/DXF dosyaları backend'e gönderilip PDF'e dönüştürüldükten sonra uygulama içinde açılabilir.
+- DWG dosyaları CAD backend'ine JSON sahne formatında gönderilir; uygulama sahne bağlantısını indirip çizgi, daire, yay, polyline ve metinleri Flutter `CustomPainter` ile gösterir. DXF çıktısı ayrıca indirilerek çevrimdışı kullanım için saklanır.
 - Kayıt ekranında arama, tarih aralığı, eksik alan filtresi ve sıralama kullanılabilir.
 - Toplam kayıt ve üretim özeti görüntülenebilir; tarih damgalı Excel yedeği paylaşılabilir.
 
-İrsaliye dosya seçimi JPG, JPEG, PNG, HEIC, HEIF ve WEBP görsellerini destekler. Proje Okuma ekranı PDF, görsel, DWG ve DXF dosyalarını destekler. DWG/DXF için `backend/` altındaki converter servisi ve lisanslı bir DWG/PDF converter gerekir. iOS'ta Apple Vision, Android'de Google ML Kit OCR kullanılır.
+İrsaliye dosya seçimi JPG, JPEG, PNG, HEIC, HEIF ve WEBP görsellerini destekler. Proje Okuma ekranı PDF, görsel, DWG ve DXF dosyalarını destekler. DWG sahne akışı, `/api/cad/convert?format=json` yanıtında `mobileSceneUrl` ve `downloadUrl` sağlayan bir CAD API bekler; URL'ler `API_BASE_URL` ayarına göre çözülür. Sahne yanıtındaki `warnings` ve `unsupportedEntities` görüntüleyicide gösterilir; bu nedenle JSON önizlemesi tüm DWG nesnelerini kapsamayabilir. DXF indirme bağlantısı daha kapsamlı görüntüleme ve çevrimdışı kullanım için korunur. `backend/` altındaki CLI dönüştürücü bu HTTP sözleşmesini sağlamaz; çalışan bir CAD API adresi uygulamanın API ayarlarında yapılandırılmalıdır. iOS'ta Apple Vision, Android'de Google ML Kit OCR kullanılır.
 
 ## Çalıştırma
 

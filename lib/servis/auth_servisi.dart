@@ -3,9 +3,10 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sefim/servis/api_config.dart';
 
 class AuthServisi {
-  AuthServisi({this.baseUrl = 'http://localhost:3000/auth'});
+  AuthServisi({String? baseUrl}) : baseUrl = baseUrl ?? ApiConfig.authUrl;
 
   final String baseUrl;
 
